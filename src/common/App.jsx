@@ -123,13 +123,7 @@ function App({ children }) {
   //   return () => window.removeEventListener("resize", handleResize)
   // }, [handleResize])
   
-  useEffect(() => {
-    if(!pathName?.includes('/products')) resetFilter()
-    document.title =
-      pathName === "/"
-        ? "Homepage muatparts"
-        : `muatparts | ${pathName.slice(1).replace(/-/g, " ")}`
-  }, [pathName])
+ 
   useEffect(() => {
     if (!id) {
       // list bug mandiri multibahasa
