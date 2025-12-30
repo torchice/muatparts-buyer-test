@@ -1,0 +1,226 @@
+
+import { useHeader } from '@/common/ResponsiveContext'
+import React, { useEffect, useState } from 'react'
+import DetailOrderMobile from '@/containers/DetailOrderMobile/DetailOrderMobile'
+import PaymentMethodMobile from '@/containers/PaymentMethodMobile/PaymentMethodMobile'
+import TrackOrderMobile from '@/containers/TrackOrderMobile/TrackOrderMobile'
+import { status_pesanan } from '../Daftarpesanan'
+import CardOrderProduct from '@/components/CardOrderProduct/CardOrderProduct'
+import SWRHandler from '@/services/useSWRHook'
+import { authZustand } from '@/store/auth/authZustand'
+import { metaSearchParams } from '@/libs/services'
+import ModalComponent from '@/components/Modals/ModalComponent'
+import RadioButton from '@/components/Radio/RadioButton'
+import Input from '@/components/Input/Input'
+import Button from '@/components/Button/Button'
+import { useCustomRouter } from '@/libs/CustomRoute'
+import { useCheckoutStore } from '@/store/checkout'
+import { userLocationZustan } from '@/store/manageLocation/managementLocationZustand'
+import BerikanUlasanResponsive from '@/app/ulasanbuyer/BerikanUlasanResponsive'
+import { useLanguage } from '@/context/LanguageContext'
+// 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0563
+function IdPesananResponsive({data,reject_options,mutateIdPesanan}) {
+  const {
+    appBarType, //pilih salah satu : 'header_title_secondary' || 'header_search_secondary' || 'default_search_navbar_mobile' || 'header_search' || 'header_title'
+    appBar, // muncul ini : {onBack:null,title:'',showBackButton:true,appBarType:'',appBar:null,header:null}
+    renderAppBarMobile, // untuk render komponen header mobile dengan memasukkanya ke useEffect atau by trigger function / closer
+    setAppBar, // tambahkan payload seperti ini setAppBar({onBack:()=>setScreen('namaScreen'),title:'Title header',appBarType:'type'})
+    handleBack, // dipanggil di dalam button di luar header, guna untuk kembali ke screen sebelumnya
+    clearScreen,// reset appBar
+    setScreen, // set screen
+    screen, // get screen,
+    search, // {placeholder:'muatparts',value:'',type:'text'}
+    setSearch, // tambahkan payload seperti ini {placeholder:'Pencarian',value:'',type:'text'}
+  }=useHeader()
+  const {t}=useLanguage()
+  const router=useCustomRouter()
+  const status_action_button_detail = status_pesanan?.find(val=>val.id===data?.statusInfo?.statusInfoBuyer?.title_text)
+  const [getOrderTrack,setOrderTrack]=useState([])
+  const [getAllProductShow,setAllProductShow]=useState([])
+  const {useSWRMutateHook,useSWRHook}=SWRHandler()
+  
+  const {trigger:cancelOrder}=useSWRMutateHook(process.env.NEXT_PUBLIC_GLOBAL_API+'v1/muatparts/orders/cancel')
+  const { data: resCompleteTransaction, trigger: triggerCompleteTransaction } =
+    useSWRMutateHook(process.env.NEXT_PUBLIC_GLOBAL_API + `v1/muatparts/transactions/complete`, "POST");
+  const [showCancel,setShowCancel]=useState(false)
+  const [cancelReason,setCancelReason]=useState('')
+  const [cancelReasonID,setCancelReasonID]=useState('')
+  const [getReason,setReason]=useState('')
+  const [getValidation,setValidation]=useState('')
+  const { setBuyNow } = useCheckoutStore();
+  const {selectedLocation}=userLocationZustan()
+  
+  const [data_reject_options,set_data_reject_options] = useState([])
+
+  useEffect(()=>{
+    if(!data_reject_options.length) set_data_reject_options(reject_options?.reverse())
+  },[reject_options])
+
+  const { trigger: submitDataRoom } = useSWRMutateHook(
+    `${process.env.NEXT_PUBLIC_CHAT_API}api/rooms/muat-muat`,
+    "POST",
+    null,
+    null,
+    { loginas: "buyer" }
+  );
+  const directChatRoom = () => {
+    // 25. 11 - QC Plan - Web - Ronda Live Mei - LB - 0178
+    // Saat ini payload yg benar seperti di src/components/OrderComponents/OrderAction.jsx
+    const body ={
+      recipientMuatId: data?.storeOrders?.[0]?.storeID,
+      recipientRole: "seller",
+      menuName: "Muatparts",
+      subMenuName: "Muatparts",
+      message: "",
+      initiatorRole: "buyer",
+    }
+    submitDataRoom(body).then((x) => {
+      setTimeout(() => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("initiatorId", "");
+        searchParams.set("initiatorRole", body.initiatorRole);
+        // recipientMuatId yang ada di payload, diganti dengan recipientId karena FE chat menggunakan recipientId
+        searchParams.set("recipientId", body.recipientMuatId);
+        searchParams.set("recipientRole", body.recipientRole);
+        searchParams.set("menuName", body.menuName);
+        searchParams.set("subMenuName", body.subMenuName);
+        searchParams.set("accessToken", authZustand.getState().accessToken);
+        searchParams.set("refreshToken", authZustand.getState().refreshToken);
+        router.push(
+          `${process.env.NEXT_PUBLIC_CHAT_URL}initiate?${searchParams.toString()}`
+        );
+      }, 2000);
+    });
+  };
+  function handleCancelorder() {
+    cancelOrder({
+        orderID:data?.orderID,
+        reason:cancelReason.toLowerCase()==='lainnya'?getReason:cancelReason,
+        cancelOptionID:cancelReasonID
+    }).then(()=>{
+      router.push('/daftarpesanan?tab=6')
+    })
+  }
+  function handleActionsButton(button='',val) {
+    if(button==='Chat Penjual'){
+      return directChatRoom()
+    }
+    if(button==='Bayar Sekarang'){
+      // setBuyNow({
+      //   sellerID: val?.storeOrders?.[0]?.storeID,
+      //   locationID: selectedLocation.ID,
+      //   products:val?.storeOrders?.[0]?.items?.map(a=>({id:a?.orderProductID,variantID:a?.variant?.id??null,qty:a?.qty,notes:''}))
+      // });
+    }
+    if(button==='Batalkan Pesanan') return setShowCancel(true)
+
+    if(button==='Selesaikan Pesanan'){
+      // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0563
+      triggerCompleteTransaction({
+        transactionId: data?.storeOrders[0].transactionID,
+      })
+    }
+    if(button==='Bantuan') return router.push('https://faq.muatmuat.com/pusat-bantuan')
+    if(button==='Detail Komplain'){}
+    if(button==='Berikan Ulasan') setScreen('berikan_ulasan')
+    
+  }
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0563
+  useEffect(() => {
+      if (resCompleteTransaction) mutateIdPesanan()
+    }, [resCompleteTransaction])
+  useEffect(()=>{
+    window.scrollTo(0,0)
+    if(!screen||screen==='detail_pesanan'){
+      setAppBar({
+        title:t('AppKelolaPesananSellerMuatpartsDetailPesanan'),
+        appBarType:'header_title',
+      })
+    }
+    if(screen==='cara_pembayaran'){
+      setAppBar({
+        title:t('TransaksiPembelianDetailLihatCaraPembayaran'),
+        appBarType:'header_title',
+        onBack:()=>setScreen('detail_pesanan')
+      })
+    }
+    if(screen==='lacak_pesanan'||screen==='lacak_pesanan_detail'){
+      setAppBar({
+        title:t('AppKelolaPesananSellerMuatpartsLacakPesanan'),
+        appBarType:'header_title',
+        onBack:()=>setScreen('detail_pesanan')
+      })
+    }
+    if(screen==='show_all_products'){
+      setAppBar({
+        title:t('titleDetails'),
+        appBarType:'header_title',
+        onBack:()=>setScreen('detail_pesanan')
+      })
+    }
+  },[screen])
+  if(screen==='cara_pembayaran') return <PaymentMethodMobile detailPesanan={data} />
+  if(screen==='lacak_pesanan'||screen==='lacak_pesanan_detail') return <TrackOrderMobile data={getOrderTrack}/>
+  if(screen==='berikan_ulasan') return <BerikanUlasanResponsive  data={data}   />
+  if(screen==='show_all_products') return <div className='flex flex-col gap-2 bg-neutral-200'>
+    {
+      getAllProductShow?.map((product,i)=><CardOrderProduct
+        classname={"pb-8 py-6 px-4"}
+        key={i}
+        name={product?.productName}
+        afterPrice={product?.originalPromoPrice}
+        beforePrice={product?.originalPrice}
+        catatan={product?.note}
+        quantity={product?.quantity}
+        discount={product?.discountedPercentage}
+        description={product?.productDetails}
+        image={product?.imageUrl}
+      />)
+    }
+  </div>
+
+  // main screen
+  return <>
+    <DetailOrderMobile statusPesanan={data?.statusInfo?.statusInfoBuyer} detailPesanan={data} onClick={()=>{}} onClickSetLacakPesanan={setOrderTrack} onClickLeft={handleActionsButton} onClickRight={handleActionsButton} multipleButtonBottom={status_action_button_detail?.action_button_detail?.length>1} action_button_detail={status_action_button_detail} onShowAllProduct={setAllProductShow} handleActionsButton={handleActionsButton} />
+
+
+    <ModalComponent full type='BottomSheet' title={t('AppKomplainBuyerLabelSelectCancellationReason')} isOpen={showCancel} setClose={()=>setShowCancel(false)}>
+        <div className='containerMobile w-full semi-sm gap-4 flex flex-col max-h-[339px] overflow-y-auto'>
+            {
+                data_reject_options?.map(val=>{
+                    return(
+                        <div key={val?.id} className='pb-4 border-b border-neutral-400 flex w-full justify-between items-center select-none' onClick={()=>{
+                            setCancelReasonID(val?.id)
+                            setCancelReason(val?.value)}}>
+                            <span>{val?.value}</span>
+                            <RadioButton label={''} checked={cancelReason===val?.value} />
+                        </div>
+                    )
+                })
+            }
+
+            <div className='flex flex-col'>
+                {cancelReason==='Lainnya'&&<Input value={getReason} changeEvent={e=>{
+                    if(e.target.value){
+                        setValidation('')
+                        setReason(e.target.value)
+                    }
+                }} placeholder='Masukkan Alasan Pembatalan' classInput={'!w-full'} classname={`!w-full !max-w-full h-8 ${getValidation?'input-error':''}`} />}
+                <span className='medium-xs text-error-400 mt-3'>{getValidation}</span>
+            </div>
+            <Button disabled={!cancelReason} Class='!w-full !max-w-full mb-4' onClick={()=>{
+                if(cancelReason==='Lainnya'&&!getReason){
+                    setValidation('Alasan Pembatalan wajib diisi')
+                }else{
+                    setShowCancel(false)
+                    handleCancelorder()
+                    router.push('/detailpesanan?tab=6')
+                }
+            }}>{t('InfoPraTenderSalinButtonTerapkan')}</Button>
+        </div>
+    </ModalComponent>
+  </>
+
+}
+
+export default IdPesananResponsive

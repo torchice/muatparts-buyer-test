@@ -1,0 +1,85 @@
+'use client';
+import Image from 'next/image';
+import style from './StoreCardComponent.module.scss'
+import IconComponent from '../IconComponent/IconComponent';
+import { numberFormatMoney } from '@/libs/NumberFormat';
+import { useCustomRouter } from '@/libs/CustomRoute';
+import { viewport } from '@/store/viewport';
+import ImageComponent from '../ImageComponent/ImageComponent';
+import { useLanguage } from '@/context/LanguageContext';
+// 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0433
+function StoreCardComponent({
+    ID,Logo,Name,IsOnline,VehicleBrands,Products,City,Rating,SoldCount
+}) {
+    const router = useCustomRouter()
+    const {isMobile}=viewport()
+    const products = isMobile?Products?.slice(0,3):Products?.slice(0,4)
+     const { t } = useLanguage();
+    return (
+        <div className={`${style.main} py-4 px-3 rounded-md gap-2 border border-neutral-400 flex flex-col h-[290px]`}>
+            <div className='flex justify-between items-start'>
+                <div className='flex gap-3 items-start cursor-pointer' onClick={()=>router.push(`/seller/${ID}`)}>
+                    {/* 25. 07 - QC Plan - Web Apps - Marketing Muatparts - LB - 0011 */}
+                    {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0625, LB - 0624 */}
+                    <div className={`min-w-10 min-h-10 overflow-hidden object-cover rounded-full grid place-content-center`}>
+                        {Logo?<ImageComponent src={Logo} width={40} height={40} alt={Name} />:<ImageComponent
+                                src={"/img/seller_logo.png"}
+                                alt="logo"
+                                className={'bg-[#C8C8C8] scale-[0.8] bg-transparent'}
+                                width={30}
+                                height={30}
+
+                            />}
+                    </div>
+                    <div className='flex flex-col gap-2'>
+                        <p className='font-bold text-neutral-900 text-xs line-clamp-2'>{Name}</p>
+                        {IsOnline&&<p className='font-medium text-xs text-neutral-700'>{t("statusOnline")}</p>}
+                        <div className={style.truckMobile+' flex gap-1 items-center'}>
+                            <ImageComponent width={16} height={16} src={'/icons/mini-truck.svg'} alt='truck' />
+                            <p className='font-medium text-xs text-neutral-700'>{VehicleBrands}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className='flex gap-2'>
+                {
+                    products?.length?products?.map((val,i)=>{
+                        return(
+                            <div key={i} className='rounded-md overflow-hidden flex flex-col border border-neutral-400 bg-neutral-50 w-[100px]'>
+                                <div className='w-full h-[100px]'>
+                                    {val?.Photo?<ImageComponent src={val?.Photo} width={96} height={96} className='w-full h-full object-none' alt={Name} />:<span className='w-24 h-24 border border-neutral-400'></span>}
+                                </div>
+                                <div className='py-3 px-2 text-[10px] font-medium'>
+                                    {
+                                        numberFormatMoney(val?.Price)
+                                    }
+                                </div>
+                            </div>
+                        )
+                    }):<div className='w-[100px] h-[123px] border border-neutral-400 rounded grid place-content-center'>
+                        <span className='text-neutral-400'>No Products</span>
+                    </div>
+                }
+            </div>
+            <div className='flex gap-3 items-center'>
+                <div className='flex gap-1 items-center'>
+                    <ImageComponent src={'/icons/product-marker.svg'} width={16} height={16} alt='City' />
+                    <span className='text-neutral-700 font-medium text-[12px]  max-w-[86pxpx] line-clamp-1'>{City}</span>
+                </div>
+                <div className='flex gap-1 items-center'>
+                    <ImageComponent src={'/icons/product-star.svg'} width={16} height={16} alt='star' />
+                    {/* // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0433 */}
+                    <span className='text-neutral-700 font-medium text-[12px] max-w-[112px] line-clamp-1'>
+                        {Rating} &#183; {t("labelTerjualBuyer")} {SoldCount??0}</span>
+                </div>
+                <div className={style.truckWeb+' flex gap-1 items-center'}>
+                    <ImageComponent width={16} height={16} src={'/icons/mini-truck.svg'} alt='truck' />
+                    <p className='font-medium text-xs text-neutral-700 w-full line-clamp-1'>{VehicleBrands}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default StoreCardComponent;
+  

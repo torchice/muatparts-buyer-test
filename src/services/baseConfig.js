@@ -1,0 +1,145 @@
+'use client'
+import { useCustomRouter } from "@/libs/CustomRoute"
+import { authZustand } from "@/store/auth/authZustand"
+import { userZustand } from "@/store/auth/userZustand"
+import { userLocationZustan } from "@/store/manageLocation/managementLocationZustand"
+import axios from "axios"
+import { useSearchParams } from "next/navigation"
+axios.interceptors.response.use(
+    function(a){
+        if(a?.status==200&&a?.headers?.["x-token"]){
+            let token= a?.headers
+            authZustand.getState().setToken({accessToken:token?.["x-token"],refreshToken:token?.["x-refreshtoken"]})
+        }
+        if(a?.status==401){
+            userZustand.getState().removeUser()
+            userLocationZustan?.getState().resetLocation()
+        }
+        return a
+    },
+    // imp_undermaintenance_uat
+    (error) => {
+        if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx.
+            // This is where you'd typically handle 503 if the server sent a proper 503 response.
+            if (error.response.status === 503) {
+                console.warn(
+                    "Service Unavailable (503). Redirecting to maintenance page."
+                );
+                // Redirect the user to /maintenance
+                window.location.replace(
+                    process.env.NEXT_PUBLIC_INTERNAL_WEB + "sistem"
+                );
+                return new Promise(() => {}); // Prevent further promise resolution
+            }
+        }else if(error.request) {
+            // No response received (e.g., network error, server completely down).
+            console.error("Network Error. No response from server.");
+            // Redirect to maintenance page because server is effectively unavailable.
+            window.location.replace(
+            process.env.NEXT_PUBLIC_INTERNAL_WEB + "sistem"
+            );
+            return new Promise(() => {}); // Prevent further error propagation.
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error("Request setup error:", error.message);
+        }
+        // Always re-throw the error so it can be caught by individual API calls
+        // unless you've explicitly handled it (like redirecting and preventing further resolution).
+        return Promise.reject(error);
+    }
+)
+function ConfigUrl(urlCustom) {
+    const token=authZustand()
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0718
+    const getLang = useSearchParams()
+    const url=urlCustom?urlCustom:process.env.NEXT_PUBLIC_GLOBAL_API
+    async function get({path,options}){
+        try {
+            const result = await axios.get(urlCustom?urlCustom:url+path,options?options:{
+                headers:{
+                    "Authorization":`Bearer ${token?.accessToken}`,
+                    "refreshToken":token?.refreshToken,
+                    "languageid":getLang.get('lang') || localStorage.getItem('lang') ||'id',
+                    "platform":"mobile",
+                    "loginas":"buyer"
+                },
+                ...options
+            })
+            return result
+        } catch (error) {
+            if(error?.status==401 || error?.status==403){
+                userZustand.getState().removeUser()
+            }
+        }
+        axios.delete()
+    }
+    async function post({path,data,options}){
+        try {
+            return axios.post(url+path,data,{
+                headers:{
+                    Authorization:'Bearer '+token?.accessToken,
+                    "refreshToken":token?.refreshToken,
+                    "languageid":getLang.get('lang') || localStorage.getItem('lang') ||'id',
+                    "platform":"mobile",
+                    "loginas":"buyer"
+                },
+                ...options
+            }).then(a=>{
+              return a
+            })
+        } catch (error) {
+            if(error?.status==401 || error?.status==403){
+                userZustand.getState().removeUser()
+            }
+        }
+    }
+    async function put({path,data,options}){
+        try {
+            return axios.put(url+path,data,{
+                headers:{
+                    Authorization:'Bearer '+token?.accessToken,
+                    "refreshToken":token?.refreshToken,
+                    "languageid":getLang.get('lang') || localStorage.getItem('lang') ||'id',
+                    "platform":"mobile",
+                    "loginas":"buyer"
+                },
+                ...options
+            }).then(a=>{
+              return a
+            })
+        } catch (error) {
+            if(error?.status==401 || error?.status==403){
+                userZustand.getState().removeUser()
+            }
+        }
+    }
+    async function deleted({path,options}){
+        console.log("op",options)
+        try {
+            return axios.delete(url+path,{
+                headers:{
+                    Authorization:'Bearer '+token?.accessToken,
+                    "refreshToken":token?.refreshToken,
+                    "languageid":getLang.get('lang') || localStorage.getItem('lang') ||'id',
+                    "platform":"mobile",
+                    "loginas":"buyer"
+                },
+                ...options
+            }).then(a=>{return a})
+        } catch (error) {
+            if(error?.status==401 || error?.status==403){
+                userZustand.getState().removeUser()
+            }
+        }
+    }
+    return {
+        get,
+        post,
+        put,
+        deleted
+    }
+}
+
+export default ConfigUrl

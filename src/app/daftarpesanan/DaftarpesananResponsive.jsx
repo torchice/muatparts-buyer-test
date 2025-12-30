@@ -1,0 +1,568 @@
+import { useHeader } from "@/common/ResponsiveContext";
+import React, { useEffect, useState } from "react";
+import style from "./Daftarpesanan.module.scss";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import ListOrderCardMobile from "@/components/ListOrderCardMobile/ListOrderCardMobile";
+import DataNotFound from "@/components/DataNotFound/DataNotFound";
+import ModalComponent from "@/components/Modals/ModalComponent";
+import ModalPeriode from "./screens/ModalPeriode";
+import DetailOrderMobile from "@/containers/DetailOrderMobile/DetailOrderMobile";
+import PaymentMethodMobile from "@/containers/PaymentMethodMobile/PaymentMethodMobile";
+import TrackOrderMobile from "@/containers/TrackOrderMobile/TrackOrderMobile";
+import CustomLink from "@/components/CustomLink";
+import { useCustomRouter } from "@/libs/CustomRoute";
+import SWRHandler from "@/services/useSWRHook";
+import InfiniteScrollContainer from "@/containers/InfiniteScrollContainer/InfiniteScrollContainer";
+import { authZustand } from "@/store/auth/authZustand";
+import { metaSearchParams } from "@/libs/services";
+import { useCheckoutStore } from "@/store/checkout";
+import { userLocationZustan } from "@/store/manageLocation/managementLocationZustand";
+import BerikanUlasanResponsive from "../ulasanbuyer/BerikanUlasanResponsive";
+import { useSearchParams } from "next/navigation";
+import { useLanguage } from "@/context/LanguageContext";
+const menusDefault = (t) => [
+  {
+    name: t("LandingIndexSemua"),
+    notif: 3,
+    includes: [],
+    id:"Semua",
+  },
+  {
+    name: t("AppMuatpartsDaftarPesananBuyerBelumBayar"),
+    notif: 5,
+    includes: ["Menunggu Pembayaran"],
+    id:"Belum_Bayar"
+  },
+  {
+    name: t("AppMuatpartsDaftarPesananBuyerDiproses"),
+    notif: 1,
+    includes: ["Menunggu Respon Penjual", "Dikemas"],
+    id:"Diproses"
+  },
+  {
+    name: t("AppKelolaPesananSellerMuatpartsDikirim"),
+    notif: 1,
+    includes: ["Dikirim", "Tiba di Tujuan", "Dikomplain"],
+    id:"Dikirim"
+  },
+  {
+    name: t("AppKelolaPesananSellerMuatpartsSelesai"),
+    notif: 1,
+    includes: ["Selesai", "Komplain Selesai"],
+    id:"Selesai"
+  },
+  {
+    name: t("KontrakHargaIndexDibatalkan"),
+    notif: 1,
+    includes: [
+      "Dibatalkan Pembeli",
+      "Dibatalkan Penjual",
+      "Dibatalkan Sistem",
+      "Pengembalian Dana Selesai",
+    ],
+    id:"Dibatalkan"
+  },
+];
+function DaftarpesananResponsive({
+  data,
+  status_pesanan,
+  detailPesanan,
+  handleFilterOrderList,
+  data_count,
+  page,
+  setPage,
+  pageSize,
+  isLoading,
+}) {
+  const { t } = useLanguage();
+  const router = useCustomRouter();
+  const getSearchParam = useSearchParams();
+  const { useSWRMutateHook } = SWRHandler();
+  const [menus, setMenus] = useState(menusDefault(t));
+  const [tab, setTab] = useState(0);
+  const [getMenu, setMenu] = useState(t("LandingIndexSemua"));
+  const [showPeriode, setShowPeriode] = useState(false);
+  const [getSelectedPeriode, setSelectedPeriode] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [getId, setId] = useState("");
+  const [getStatus, setStatus] = useState(null);
+  const [getOrderTrack, setOrderTrack] = useState([]);
+  const { selectedLocation } = userLocationZustan();
+  const { setAppBar, screen, setSearch, setScreen, search } = useHeader();
+  const [detailData, setDetailData] = useState({});
+  const { setBuyNow } = useCheckoutStore();
+  const urlDetail = (orderID, transactionID) =>
+    `/daftarpesanan/${orderID}?${
+      menus
+        .find((val) => val.name === getMenu)
+        .includes?.includes("Menunggu Pembayaran")
+        ? `page=${menus
+            .find((val) => val.name === getMenu)
+            .includes[0].toLowerCase()
+            .replace(" ", "_")}`
+        : `transactionID=${transactionID}`
+    }`;
+  const { trigger: submitDataRoom } = useSWRMutateHook(
+    `${process.env.NEXT_PUBLIC_CHAT_API}api/rooms/muat-muat`,
+    "POST",
+    null,
+    null,
+    { loginas: "buyer" }
+  );
+  const { trigger: addToTroliBulk, error: errorAddToTroliBulk } =
+    useSWRMutateHook(
+      process.env.NEXT_PUBLIC_GLOBAL_API + "v1/muatparts/cart/bulk_item"
+    );
+  // LB - 0401, 25.03
+  const directChatRoom = () => {
+    const body = {
+      initiatorRole: "buyer",
+      recipientMuatId: getId?.sellerID,
+      recipientRole: "seller",
+      menuName: "Muatparts",
+      subMenuName: "Muatparts",
+      accessToken: authZustand.getState().accessToken,
+      refreshToken: authZustand.getState().refreshToken,
+      message: "",
+    };
+    submitDataRoom(body).then((x) => {
+      setTimeout(() => {
+        router.push(
+          `${
+            process.env.NEXT_PUBLIC_CHAT_URL
+          }initiate?initiatorId=&${metaSearchParams(body)}`
+        );
+      }, 2000);
+    });
+  };
+  function handleClickFromCard(params, val) {
+    if (params?.button === "Berikan Ulasan") {
+      setScreen("berikan_ulasan");
+      setDetailData(val);
+      setStatus(params);
+      return;
+    }
+    if (params?.button === "Beli Lagi") {
+      addToTroliBulk({
+        cart: [
+          {
+            locationId: selectedLocation.ID,
+            items: val?.transaction?.[0]?.products?.map((a) => ({
+              productId: a?.id,
+              variantId: a?.variant?.id ?? null,
+              quantity: a?.qty,
+              notes: a?.notes,
+              isChecked: true,
+            })),
+          },
+        ],
+      }).then(() => router.push("/troli"));
+      // setBuyNow([{
+      //   sellerID: val?.transaction?.[0]?.sellerID,
+      //   locationID: selectedLocation.ID,
+      //   products:val?.transaction?.[0]?.products?.map(a=>({id:a?.id,variantID:a?.variant?.id??null,qty:a?.qty,notes:''}))
+      // }]);
+      // setStatus(params)
+      // router.push("/checkout");
+      // return
+    }
+    if (params?.action_button === "Lacak Pesanan") {
+      setScreen("lacak_pesanan");
+      setOrderTrack(val?.transaction?.[0]?.trackingHistory);
+      setStatus(params);
+      return;
+    }
+    if (params?.action_button === "Detail Pesanan") {
+      router.push(
+        urlDetail(val?.orderID, val?.transaction?.[0]?.transactionID)
+      );
+      return;
+    }
+  }
+  useEffect(() => {
+    if (typeof data_count === "object") {
+      // LBM - Data tidak muncul pada header
+      let tmp = menus?.map((val) => {
+        let notif = data_count?.[val?.id];
+        val.notif = notif;
+        return val;
+      });
+      setMenus(tmp);
+    }
+  }, [data_count]);
+  useEffect(() => {
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0088
+    const tabparam = getSearchParam.get("tab");
+    if (!tabparam) {
+      router.replace(`/daftarpesanan?tab=1`);
+      setTab(1);
+    }
+    if (typeof Number(tabparam) === "number" && tab == 0) {
+      handleFilterOrderList(
+        "status",
+        menus[Number(tabparam) - 1]?.includes?.toString()
+      );
+      setTab(Number(tabparam));
+      router.replace(`/daftarpesanan?tab=${Number(tabparam)}`);
+      return;
+    }
+    if (tabparam != tab) {
+      handleFilterOrderList(
+        "status",
+        menus[tab - 1 < 0 ? 1 : tab - 1]?.includes?.toString()
+      );
+      setTab(tab ? tab : 1);
+      router.replace(`/daftarpesanan?tab=${tab ? tab : 1}`);
+    }
+    if (tabparam == tab) {
+      handleFilterOrderList(
+        "status",
+        menus[tab - 1 < 0 ? 1 : tab - 1]?.includes?.toString()
+      );
+    }
+  }, [getSearchParam, tab, screen]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (screen) setAppBar({ renderActionButton: null });
+    if (!screen) {
+      setSearch({
+        placeholder: t("AppMuatpartsDaftarPesananBuyerCariPesanan"),
+        onSubmitForm: true,
+      });
+      setAppBar({
+        appBarType: "header_search",
+        bottomTabNavigation: true,
+        renderActionButton: (
+          <div className="gap-2 flex items-center ml-2">
+            <span
+              className="flex flex-col gap-[2px] z-30 select-none cursor-pointer"
+              onClick={() => router.push("/troli")}
+            >
+              <IconComponent
+                classname={"cart-outline"}
+                src={"/icons/cart.svg"}
+                width={24}
+                height={24}
+              />
+              <span className="font-semibold text-neutral-50 text-[10px] text-center">
+                {t("labeltrolibuyer")}
+              </span>
+            </span>
+            <span
+              className="flex flex-col gap-[2px] items-center z-30 select-none cursor-pointer"
+              onClick={() => setShowPeriode(true)}
+            >
+              {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0397 */}
+              <IconComponent
+                classname={`${
+                  getSelectedPeriode
+                    ? "calendar-fill bg-white rounded-[100%]"
+                    : "calendar-outline"
+                }`}
+                src={"/icons/calendar.svg"}
+                width={26}
+                height={26}
+              />
+              <span className="font-semibold text-neutral-50 text-[10px] text-center">
+                {t("SubscriptionPeriod")}
+              </span>
+            </span>
+          </div>
+        ),
+      });
+    }
+    if (screen === "detail_pesanan") {
+      setAppBar({
+        title: t("SubscriptionCreateLabelDetailPesanan"),
+        appBarType: "header_title",
+        onBack: () => setScreen(""),
+      });
+    }
+    if (screen === "cara_pembayaran") {
+      setAppBar({
+        title: "Cara Pembayaran",
+        appBarType: "header_title",
+        onBack: () => setScreen("detail_pesanan"),
+      });
+    }
+    if (screen === "lacak_pesanan" || screen === "lacak_pesanan_detail") {
+      setAppBar({
+        title: t("AppKelolaPesananSellerMuatpartsLacakPesanan"),
+        appBarType: "header_title",
+        onBack: () =>
+          screen === "lacak_pesanan"
+            ? setScreen("")
+            : setScreen("detail_pesanan"),
+      });
+    }
+    if (screen == "berikan_ulasan") {
+      setAppBar({
+        title: t("AppMuatpartsUlasanBuyerTulisUlasan"),
+        appBarType: "header_title",
+        onBack: () => setScreen(""),
+      });
+    }
+  }, [screen, getSelectedPeriode]);
+  useEffect(() => {
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0403
+    if (search?.value?.trim()) {
+      handleFilterOrderList("q", search?.value);
+    } else {
+      handleFilterOrderList("q", "");
+    }
+  }, [search]);
+
+  if (screen === "detail_pesanan")
+    return (
+      <DetailOrderMobile
+        statusPesanan={detailPesanan?.statusInfo?.statusInfoBuyer?.title_text}
+        detailPesanan={detailPesanan}
+        onClick={handleTerapkan}
+      />
+    );
+  if (screen === "cara_pembayaran")
+    return <PaymentMethodMobile detailPesanan={detailPesanan} />;
+  if (screen === "lacak_pesanan" || screen === "lacak_pesanan_detail")
+    return <TrackOrderMobile data={getOrderTrack} />;
+  if (screen === "berikan_ulasan")
+    return (
+      <BerikanUlasanResponsive
+        isFromList={true}
+        data={detailData}
+        handleFilterOrderList={handleFilterOrderList}
+        menus={menusDefault}
+      />
+    );
+  // main screen
+
+  return (
+    <div className={`flex flex-col gap-2 bg-neutral-200 pb-20`}>
+      <ModalComponent
+        full
+        type="BottomSheet"
+        title="Pilih Periode"
+        isOpen={showPeriode}
+        setClose={() => setShowPeriode(false)}
+      >
+        <ModalPeriode
+          onSelected={(a, selected) => {
+            // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0187
+            if (typeof a === "object") {
+              handleFilterOrderList("start_date", a?.start);
+              handleFilterOrderList("end_date", a?.end);
+              setSelectedPeriode({ ...selected, ...a });
+            } else if (typeof a === "string" && !a) {
+              handleFilterOrderList("start_date", "");
+              handleFilterOrderList("end_date", "");
+              setSelectedPeriode(selected);
+            } else {
+              handleFilterOrderList("start_date", a);
+              handleFilterOrderList("end_date", "");
+              setSelectedPeriode(selected);
+            }
+            setShowPeriode(false);
+          }}
+          onClose={() => setShowPeriode(false)}
+          defaultValue={getSelectedPeriode}
+        />
+      </ModalComponent>
+      {/* 25. 11 - QC Plan - Web - Ronda Live Mei - LB - 0177 */}
+      <div className="w-full bg-white">
+        <div className="flex mt-2 gap-1 overflow-x-scroll scrollbar-none bg-neutral-50">
+          {/* Improvement fix wording Pak Brian */}
+          {
+            isLoading?(
+              Array(6).fill('').map((val, i) => {
+                return (
+                  <div className="flex gap-3" key={i}>
+                    <span
+                      className={`flex bold-sm pb-3 px-4 gap-1 select-none whitespace-nowrap  ${
+                        tab == i + 1
+                          ? "border-b-muat-parts-non-800 text-muat-parts-non-800"
+                          : "border-b-transparent text-neutral-700"
+                      } border-b-2 `}
+                      
+                    >
+                      <span className="bg-gray-300 animate-skeleton skeleton w-20"/>
+                      {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0428 */}
+                    </span>
+                  </div>
+                );
+              })
+            ):(
+            menus.map((val, i) => {
+              return (
+                <div className="flex items-center gap-1" key={i}>
+                  <span
+                    className={`flex bold-sm py-2 leading-4 px-4 gap-1 select-none whitespace-nowrap  ${
+                      tab == i + 1
+                        ? "border-b-muat-parts-non-800 text-muat-parts-non-800"
+                        : "border-b-transparent text-neutral-700"
+                    } border-b-2 `}
+                    onClick={() => {
+                      setMenu(val.name);
+                      setSearch({ value: "", tmp: "" });
+                      handleFilterOrderList("page", 1);
+                      handleFilterOrderList("size", 10);
+                      handleFilterOrderList("q", "");
+                      handleFilterOrderList(
+                        "status",
+                        val?.includes?.length ? val?.includes.toString() : ""
+                      );
+                      setTab(i + 1);
+                    }}
+                  >
+                    <span>{val.name}</span>
+                    {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0428 */}
+                    <span>({val.notif && <span>{val.notif}</span>})</span>
+                  </span>
+                  <span className="w-[1px] h-[60%] bg-neutral-400"></span>
+                </div>
+              );
+            }))
+          }
+          {/* {menus.map((val, i) => {
+            return (
+              <div className="flex gap-3" key={i}>
+                <span
+                  className={`flex bold-sm pb-3 px-4 gap-1 select-none whitespace-nowrap  ${
+                    tab == i + 1
+                      ? "border-b-muat-parts-non-800 text-muat-parts-non-800"
+                      : "border-b-transparent text-neutral-700"
+                  } border-b-2 `}
+                  onClick={() => {
+                    setMenu(val.name);
+                    setSearch({ value: "", tmp: "" });
+                    handleFilterOrderList("page", 1);
+                    handleFilterOrderList("size", 10);
+                    handleFilterOrderList("q", "");
+                    handleFilterOrderList(
+                      "status",
+                      val?.includes?.length ? val?.includes.toString() : ""
+                    );
+                    setTab(i + 1);
+                  }}
+                >
+                  <span>{val.name}</span>
+                  25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0428
+                  <span>({val.notif && <span>{val.notif}</span>})</span>
+                </span>
+                <span className="w-[1px] h-[80%] bg-neutral-400"></span>
+              </div>
+            );
+          })} */}
+        </div>
+      </div>
+
+      <InfiniteScrollContainer
+        setPageChange={(p) => handleFilterOrderList("size", p * 10)}
+        currentPage={1}
+        loading={isLoading}
+        loader={
+          isLoading ? (
+            <div className="w-full h-fit flex flex-col px-4 py-3 gap-3">
+              <span className="w-full h-8 rounded bg-neutral-500 animate-pulse"></span>
+              <span className="w-full h-2 rounded bg-neutral-500 animate-pulse"></span>
+              <span className="w-full h-2 rounded bg-neutral-500 animate-pulse"></span>
+            </div>
+          ) : (
+            ""
+          )
+        }
+      >
+        {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0394 */}
+        <div className="flex flex-col gap-2">
+          {data?.length
+            ? data?.map((val, i) => (
+                <ListOrderCardMobile
+                  onClickMenu={() => {
+                    setId({
+                      orderID: val?.orderID,
+                      transactionID: val?.transaction?.[0]?.transactionID,
+                      sellerID: val?.transaction?.[0]?.sellerID,
+                    });
+                    setShowMenu(true);
+                  }}
+                  key={i}
+                  {...val}
+                  status_pesanan={status_pesanan}
+                  onClick={handleClickFromCard}
+                  val={val}
+                />
+              ))
+            : ""}
+        </div>
+        {isLoading && (
+          <div className="w-full h-fit flex flex-col px-4 py-3 gap-3">
+            <span className="w-full h-8 rounded bg-neutral-500 animate-pulse"></span>
+            <span className="w-full h-2 rounded bg-neutral-500 animate-pulse"></span>
+            <span className="w-full h-2 rounded bg-neutral-500 animate-pulse"></span>
+          </div>
+        )}
+      </InfiniteScrollContainer>
+      {isLoading &&
+        Array(2)
+          .fill("")
+          .map((val, i) => (
+            <div key={i} className="w-full h-fit flex flex-col px-4 py-3 gap-3">
+              <span className="w-full h-8 rounded bg-neutral-500 animate-pulse"></span>
+              <span className="w-full h-2 rounded bg-neutral-500 animate-pulse"></span>
+              <span className="w-full h-2 rounded bg-neutral-500 animate-pulse"></span>
+            </div>
+          ))}
+      {!data?.length && !isLoading && (
+        <div
+          className={
+            style.notFoundContainer +
+            " w-full h-full flex flex-col gap-3 px-4 justify-center items-center"
+          }
+        >
+          <DataNotFound
+            width={94}
+            height={76}
+            type="data"
+            title="Belum ada transaksi"
+          />
+          <span className="medium-xs text-neutral-600 text-center">
+            {t("AppMuatpartsDaftarPesananBuyerYukMulaiBelanja")}
+          </span>
+          <CustomLink
+            href={"/"}
+            className="w-full bg-primary-700 h-7 semi-xs text-neutral-50 items-center flex justify-center rounded-[20px]"
+          >
+            {t("AppMuatpartsDaftarPesananBuyerMulaiBelanja")}
+          </CustomLink>
+        </div>
+      )}
+      <ModalComponent
+        title="Opsi"
+        type="BottomSheet"
+        isOpen={showMenu}
+        setClose={() => setShowMenu(false)}
+      >
+        <ul className="list-none text-neutral-900 flex flex-col gap-4 px-4 pt-6">
+          <li>
+            <div
+              className="flex semi-sm pb-4 border-b border-neutral-400 select-none"
+              onClick={() => {
+                router.push(urlDetail(getId?.orderID, getId?.transactionID));
+              }}
+            >
+              <span>{t("SubscriptionCreateLabelDetailPesanan")}</span>
+            </div>
+          </li>
+          <li>
+            <div
+              className="flex semi-sm pb-4  select-none"
+              onClick={directChatRoom}
+            >
+              <span>{t("AppMuatpartsDaftarPesananBuyerChatPenjual")}</span>
+            </div>
+          </li>
+        </ul>
+      </ModalComponent>
+    </div>
+  );
+}
+
+export default DaftarpesananResponsive;

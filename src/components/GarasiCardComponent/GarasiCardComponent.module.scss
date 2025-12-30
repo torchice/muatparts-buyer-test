@@ -1,0 +1,20 @@
+
+.main{
+    display:flex;
+    width: 441px;
+    @media(max-width: 500px){
+        width: 100%;
+    }
+}
+.truckMobile{
+    display: none;
+    @media(max-width: 500px){
+        display: flex;
+    }
+}
+.truckWeb{
+    display: flex;
+    @media(max-width: 500px){
+        display: none;
+    }
+}

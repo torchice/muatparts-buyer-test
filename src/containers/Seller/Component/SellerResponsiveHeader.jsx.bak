@@ -1,0 +1,48 @@
+import IconComponent from "@/components/IconComponent/IconComponent";
+import ImageComponent from "@/components/ImageComponent/ImageComponent";
+import { useCustomRouter } from "@/libs/CustomRoute";
+import toast from "@/store/toast";
+
+const SellerResponsiveHeader = () => {
+  const { setShowToast, setDataToast } = toast();
+  const router = useCustomRouter();
+  return (
+    <div className='flex gap-2'>
+      <div
+        className='flex flex-col z-30 justify-center items-center gap-[2px] select-none cursor-pointer'
+        onClick={(e) => {
+          const text = window.location.href
+          e.preventDefault();
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(text);
+          } else {
+            const input = document.createElement("textarea");
+            input.value = text;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand("copy");
+            document.body.removeChild(input);
+          }
+          // alert("berhasil bagikan")
+          setShowToast(true);
+          setDataToast({
+            type: "success",
+            message: "Link profil toko berhasil disalin!",
+          });
+        }}  
+      >
+        <IconComponent classname={'icon-white'} width={20} height={20} src={'/icons/share.svg'} />
+        <span className='font-semibold text-neutral-50 text-[10px]'>Bagikan</span>
+      </div>
+      <div
+        className='flex flex-col z-30 justify-center items-center gap-[2px] select-none cursor-pointer'
+        onClick={()=> router.push("/troli")}
+      >
+        <ImageComponent alt='troli' width={20} height={20} src={process.env.NEXT_PUBLIC_ASSET_REVERSE+'/img/cart-outline.png'} />
+        <span className='font-semibold text-neutral-50 text-[10px]'>Troli</span>
+      </div>
+    </div>
+  )
+}
+
+export default SellerResponsiveHeader

@@ -1,0 +1,43 @@
+.ImageUploader {
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    font-size: 12px;
+    font-weight: 500;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.ImageUploaderError {
+    border-radius: 12px;
+    border-color: #EE4343 !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.ImageUploader:hover, .ImageUploaderError:hover {
+    path {
+        stroke: var(--primary-700);
+    }
+}
+
+.ImageUploaderNull{
+    border-color: #EE4343 !important;
+}
+
+.borderDashed{
+    border: 1px dashed #9d9d9d;
+}
+
+.borderImage{
+    border: 1px solid #C4C4C4;
+}

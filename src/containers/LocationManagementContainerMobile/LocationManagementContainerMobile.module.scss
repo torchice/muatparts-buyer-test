@@ -1,0 +1,14 @@
+
+.main{
+    display:flex
+}
+.iconBlue{
+    g{
+        circle{
+            stroke:var(--primary-700);
+        }
+        rect{
+            fill:var(--primary-700);
+        }
+    }
+}

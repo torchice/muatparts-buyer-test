@@ -1,0 +1,23 @@
+.main{
+    position: fixed !important;
+    left: 0;
+    :global(.MainApp){
+        overflow: hidden !important;
+    }
+}
+.closeRed{
+    path{
+        fill: #C22716;
+        stroke: #C22716;
+    }
+}
+.closeBlue{
+    path{
+        stroke: var(--primary-700);
+    }
+}
+.body{
+    body{
+        overflow-y: hidden !important;
+    }
+}

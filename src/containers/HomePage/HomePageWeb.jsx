@@ -1,0 +1,470 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import style from "./HomePage.module.scss";
+import Image from "next/image";
+import Input from "@/components/Input/Input";
+import Dropdown from "@/components/Dropdown/Dropdown";
+import Button from "@/components/Button/Button";
+import MultipleItems from "@/components/ReactSlick/MultipleItems";
+import ProductGrid from "@/components/ProductsSectionComponent/ProductGrid";
+import CategoriesHandler from "@/libs/CategoriesHandler";
+import { useLanguage } from "@/context/LanguageContext";
+import SWRHandler from "@/services/useSWRHook";
+import { filterProduct } from "@/store/products/filter";
+import { useCustomRouter } from "@/libs/CustomRoute";
+import { metaSearchParams } from "@/libs/services";
+import ProductGridLastViewed from "@/components/ProductsSectionComponent/ProductGridLastViewed";
+import PilihKendaraanSection from "./PilihKendaraan";
+
+function HomePageWeb({
+  // images
+  headerImages,
+  bannerImages,
+  promotionImages,
+  joinedSellers,
+
+  // options
+  vehicleOptions,
+  brandOptions,
+  yearOptions,
+  modelOptions,
+  typeOptions,
+
+  // products
+  lastSeenProducts,
+  mostVisitedProducts,
+  youMightLike,
+}) {
+  const NumberCircle = ({ number, active }) => {
+    return (
+      <span
+        className={`${style.numberCircle} ${
+          active ? style.active : style.inactive
+        }`}
+      >
+        {number}
+      </span>
+    );
+  };
+
+  const [filter, setVehicle] = useState({
+    vehicle: {
+      value: "",
+      name: "",
+    },
+    brand: {
+      value: "",
+      name: "",
+    },
+    year: {
+      value: "",
+      name: "",
+    },
+    model: {
+      value: "",
+      name: "",
+    },
+    type: {
+      value: "",
+      name: "",
+    },
+    keyword: "",
+  });
+
+  const resetFilter = () => {
+    setVehicle({
+      vehicle: {
+        value: "",
+        name: "",
+      },
+      brand: {
+        value: "",
+        name: "",
+      },
+      year: {
+        value: "",
+        name: "",
+      },
+      model: {
+        value: "",
+        name: "",
+      },
+      type: {
+        value: "",
+        name: "",
+      },
+      keyword: "",
+    });
+  };
+
+  const handleInputChange = (e) => {
+    setVehicle({ ...filter, keyword: e.target.value });
+  };
+  const router = useCustomRouter();
+  const { t } = useLanguage();
+  const productFilter = filterProduct();
+  function handleCariSparepart() {
+    productFilter.setFilterProduct("vehicleID", filter?.["vehicle"]?.["value"]);
+    productFilter.setFilterProduct("brandID", filter?.["brand"]?.["value"]);
+    productFilter.setFilterProduct("year", filter?.["year"]?.["value"]);
+    productFilter.setFilterProduct("modelID", filter?.["model"]?.["value"]);
+    productFilter.setFilterProduct("tipeID", filter?.["type"]?.["value"]);
+    productFilter.setFilterProduct("q", filter?.["keyword"]);
+    const filterProd = productFilter;
+    delete filterProd.setFilterProduct;
+    delete filterProd.setFilter;
+    delete filterProd.setAllFilter;
+    router.push(
+      `${process.env.NEXT_PUBLIC_ASSET_REVERSE}/products?${metaSearchParams(
+        filterProd
+      )}`
+    );
+  }
+
+  return (
+    <div>
+      <section className="bg-neutral-100 py-6">
+        <div className="flex justify-center gap-10 w-7xl mx-auto">
+          <div className="w-[500px]">
+            <MultipleItems
+              images={headerImages.map((val) => val.imagePath)}
+              urls={headerImages.map((val) => val.linkUrl)}
+              settings={{
+                slidesToShow: 1,
+                slidesToScroll: 1,
+                autoplay: true,
+                autoplaySpeed: 3000,
+                dots: true,
+                arrows: false,
+              }}
+              size={500}
+              className="rounded-xl cursor-pointer"
+            />
+          </div>
+          <div className="w-[380px] space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="font-semibold text-sm">
+                {t("pilihjeniskendaraan")}
+              </div>
+              <Image
+                src={process.env.NEXT_PUBLIC_ASSET_REVERSE + "/icons/reset.svg"}
+                width={16}
+                height={16}
+                alt="reset"
+                onClick={() => resetFilter()}
+                className="cursor-pointer "
+              />
+            </div>
+            {/* IMPROVEMENT DROPDOWN WITH LAZYLOAD */}
+            {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0842 */}
+            <PilihKendaraanSection filter={filter} setVehicle={setVehicle} />
+            {/* <div className="grid grid-flow-row-dense grid-cols-4 grid-rows-3 gap-3">
+              <Dropdown
+                defaultValue={[filter.vehicle]}
+                options={[
+                  { name: "Semua Jenis Kendaraan", value: "" },
+                  ...vehicleOptions.map((i) => {
+                    return {
+                      name: i.value,
+                      value: i.id,
+                    };
+                  }),
+                ]}
+                placeholder={t("dropdownPilihJenisKendaraan")}
+                classname="!w-full col-span-4"
+                onSearchValue={()=>{}}
+                leftIconElement={
+                  <NumberCircle number={1} active={filter.vehicle.value} />
+                }
+                onSelected={(val) => setVehicle({ ...filter, vehicle: val[0] })}
+              />
+              <Dropdown
+                defaultValue={[filter.brand]}
+                options={[
+                  { name: "Semua Brand", value: "" },
+                  ...brandOptions.map((i) => {
+                    return {
+                      name: i.value,
+                      value: i.id,
+                    };
+                  }),
+                ]}
+                placeholder={t("dropdownPilihBrand")}
+                classname="!w-full col-span-2"
+                onSearchValue={()=>{}}
+                leftIconElement={
+                  <NumberCircle number={2} active={filter.brand.value} />
+                }
+                onSelected={(val) => setVehicle({ ...filter, brand: val[0] })}
+              />
+              <Dropdown
+                defaultValue={[filter.year]}
+                options={[
+                  { name: "Semua Tahun", value: "" },
+                  ...yearOptions.map((i) => {
+                    return {
+                      name: i.value.toString(),
+                      value: i.id,
+                    };
+                  }),
+                ]}
+                placeholder={t("dropdownPilihTahun")}
+                classname="!w-full col-span-2"
+                onSearchValue={()=>{}}
+                leftIconElement={
+                  <NumberCircle number={3} active={filter.year.value} />
+                }
+                onSelected={(val) => setVehicle({ ...filter, year: val[0] })}
+              />
+              <Dropdown
+                defaultValue={[filter.model]}
+                options={[
+                  { name: "Semua Model", value: "" },
+                  ...modelOptions.map((i) => {
+                    return {
+                      name: i.value,
+                      value: i.id,
+                    };
+                  }),
+                ]}
+                placeholder={t("dropdownPilihModel")}
+                classname="!w-full col-span-2"
+                onSearchValue={()=>{}}
+                leftIconElement={
+                  <NumberCircle number={4} active={filter.model.value} />
+                }
+                onSelected={(val) => setVehicle({ ...filter, model: val[0] })}
+              />
+              <Dropdown
+                defaultValue={[filter.type]}
+                options={[
+                  { name: "Semua Tipe", value: "" },
+                  ...typeOptions.map((i) => {
+                    return {
+                      name: i.value,
+                      value: i.id,
+                    };
+                  }),
+                ]}
+                placeholder={t("dropdownPilihtipe")}
+                classname="!w-full col-span-2"
+                onSearchValue={()=>{}}
+                leftIconElement={
+                  <NumberCircle number={5} active={filter.type.value} />
+                }
+                onSelected={(val) => setVehicle({ ...filter, type: val[0] })}
+              />
+              <Input
+                placeholder={t("dropdownPilihKeywords")}
+                classname="!w-full col-span-4"
+                icon={{
+                  left: (
+                    <NumberCircle
+                      number={6}
+                      active={filter.keyword ? true : false}
+                    />
+                  ),
+                }}
+                value={filter.keyword}
+                changeEvent={handleInputChange}
+              />
+              <Button onClick={handleCariSparepart} Class="!min-w-full col-span-4 !font-semibold">{t("dropdownCariSparePart")}</Button>
+            </div> */}
+          </div>
+        </div>
+      </section>
+
+      {bannerImages.length > 0 && (
+        <section className="bg-white py-6">
+          <div className="w-[1000px] mx-auto">
+            <MultipleItems
+              images={bannerImages.map((val) => val.Image)}
+              urls={bannerImages.map((val) => val.Url)}
+              settings={{
+                slidesToShow: 1,
+                slidesToScroll: 1,
+                autoplay: true,
+                autoplaySpeed: 3000,
+                dots: true,
+              }}
+              size={1000}
+              className="rounded-xl cursor-pointer"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* {mostVisitedProducts?.Data?.length > 0 && (
+        <ProductGrid
+          totalProducts={mostVisited}
+          title={t("produkyangbanyakdikunjungi")}
+          loading={isLoading}
+          onLoadMore={handleFetchNextViewed}
+          lastPage={mostVisitedProducts?.Pagination.LastPage}
+          currentPage={currentPage}
+        />
+      )} */}
+      {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB-0280 */}
+      {mostVisitedProducts.length > 0 && (
+        <ProductGridLastViewed title={t("produkyangbanyakdikunjungi")} />
+      )}
+
+      {youMightLike.length > 0 && (
+        <ProductGrid
+          totalProducts={youMightLike}
+          grid={6}
+          title={t("titleMungkinKamuSukaBuyer")}
+        />
+      )}
+      {promotionImages.length > 0 && (
+        <section className="bg-white py-6">
+          <div className="w-[1012px] mx-auto space-y-7">
+            <h1 className="text-neutral-900 font-bold text-lg">
+              {t("titlePromoMuatpart")}
+            </h1>
+            {/* 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer */}
+            {/* LB - 0009 */}
+            <MultipleItems
+              images={promotionImages.map((val) => val.imagePath)}
+              urls={promotionImages.map((val) => val.linkUrl)}
+              settings={{
+                slidesToShow: 2,
+                slidesToScroll: 1,
+                autoplay: true,
+                autoplaySpeed: 3000,
+              }}
+              size={500}
+              className="rounded-xl cursor-pointer"
+            />
+          </div>
+        </section>
+      )}
+
+      {lastSeenProducts.length > 0 && (
+        <ProductGrid
+          totalProducts={lastSeenProducts}
+          grid={6}
+          title={t("labelTerakhirDilihat")}
+        />
+      )}
+
+      <section className="bg-neutral-100 relative pt-px">
+        <h1 className="text-neutral-900 my-10 font-bold text-[28px] text-center">
+          {t("titleKeuntunganBelanjaMuatpart")}
+        </h1>
+        <div className="absolute top-32 flex flex-col items-center w-7xl left-0 right-0 bottom-0 mx-auto">
+          <div className="grid grid-cols-4 gap-14">
+            <div className="w-[200px] space-y-3">
+              {/* Improvement Konten Marketing by Ce Nola */}
+              <Image
+                src={
+                  process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                  "/img/web-keuntungan-1-new.webp"
+                }
+                alt="image"
+                width={200}
+                height={200}
+                className="size-48 object-contain"
+              />
+              <div className="text-center font-bold leading-5">
+                {/* {t("titleLayananPengembalian7hari")} */}
+                {t("LabelkeuntunganBelanjaPencarianMudah")}
+              </div>
+              <div className="text-center font-medium text-sm">
+                {t(
+                  "LabelkeuntunganBelanjaCukupmasukkanjenismobilnamasparepartsatauuploadfotospareparts."
+                )}
+              </div>
+            </div>
+            <div className="w-[200px] space-y-3">
+              <Image
+                src={
+                  process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                  "/img/web-keuntungan-2-new.webp"
+                }
+                alt="image"
+                width={200}
+                height={200}
+                className="size-48 object-contain"
+              />
+              <div className="text-center font-bold leading-5">
+                {/* {t("titleKeamananPembayaran")} */}
+                {t("LabelkeuntunganBelanjaPembayaranAman")}
+              </div>
+              <div className="text-center font-medium text-sm">
+                {t(
+                  "LabelkeuntunganBelanjaProsespembayaranamancepatdantransparanbelanjajaditenang"
+                )}
+              </div>
+            </div>
+            <div className="w-[200px] space-y-3">
+              <Image
+                src={
+                  process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                  "/img/web-keuntungan-3-new.webp"
+                }
+                alt="image"
+                width={200}
+                height={200}
+                className="size-48 object-contain"
+              />
+              <div className="text-center font-bold leading-5">
+                {/* {t("titleGratisPengiriman")} */}
+                {t("LabelkeuntunganBelanjaPengirimanTerpercaya")}
+              </div>
+              <div className="text-center font-medium text-sm">
+                {t(
+                  "LabelkeuntunganBelanjaMuatpartsbekerjasamadenganmitrapengirimanyanghandaldanTerpercaya"
+                )}
+              </div>
+            </div>
+            <div className="w-[200px] space-y-3">
+              <Image
+                src={
+                  process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                  "/img/web-keuntungan-4-new.webp"
+                }
+                alt="image"
+                width={200}
+                height={200}
+                className="size-48 object-contain"
+              />
+              <div className="text-center font-bold leading-5">
+                {/* {t("titleSparepartTerlengkap")} */}
+                {t("LabelkeuntunganBelanjaSparepartLengkap")}
+              </div>
+              <div className="text-center font-medium text-sm">
+                {t(
+                  "LabelkeuntunganBelanjaBanyaknyasparepartberkualitasdenganpilihanlengkapdanterjangkau."
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white h-[200px] mt-24 w-full rounded-t-[40px]"></div>
+      </section>
+
+      <section className="bg-white py-16">
+        <div className="w-[1080px] mx-auto">
+          <h1 className="text-neutral-900 mt-10 mb-24 font-bold text-[28px] text-center">
+            {t("titlePenjualYangTelahBergabung")}
+          </h1>
+          <MultipleItems
+            images={joinedSellers.map((seller) => seller.logo)}
+            settings={{
+              slidesToShow: joinedSellers.length < 8 ? joinedSellers.length : 8,
+              slidesToScroll: 1,
+              autoplay: false,
+            }}
+            size={64}
+            arrowPadding="32px"
+            className="mx-auto aspect-square object-contain"
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export default HomePageWeb;

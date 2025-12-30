@@ -1,0 +1,73 @@
+import { useHeader } from '@/common/ResponsiveContext'
+import Button from '@/components/Button/Button'
+import ButtonAddAddressProduct from '@/components/ButtonAddAddressProduct/ButtonAddAddressProduct'
+import ButtonBottomMobile from '@/components/ButtonBottomMobile/ButtonBottomMobile'
+import ButtonPlusMinus from '@/components/ButtonPlusMinus/ButtonPlusMinus'
+import DataNotFound from '@/components/DataNotFound/DataNotFound'
+import IconComponent from '@/components/IconComponent/IconComponent'
+import Input from '@/components/Input/Input'
+import ListAddressContainerMobile from '@/containers/ListAddressContainerMobile/ListAddressContainerMobile'
+import { numberFormatMoney } from '@/libs/NumberFormat'
+import React, { useEffect, useState } from 'react'
+
+function MultipleAlamatScreen({data,variants,locations,selectedLocation}) {
+  const {setScreen,screen,setAppBar}=useHeader()
+  const [search,setSearch]=useState('')
+  const [getProducts,setProducts]=useState([])
+  const [getLocations,setLocations]=useState([])
+  const [getVariants,setVariants]=useState([])
+  const [isMultiple,setIsMultiple]=useState(false)
+  const [multiple,setMultiple]=useState([])
+  function name(params) {
+    
+  }
+  useEffect(()=>{
+    if(locations?.length) setLocations(locations)
+  },[locations])
+  useEffect(()=>{
+    if(variants?.length) setVariants(variants) 
+  },[])
+console.log(getLocations)
+  return (
+    <div className='flex flex-col gap-2 bg-neutral-200 h-full text-neutral-900 pb-32'>
+      
+      <div className='py-6 px-4 flex flex-col gap-4 bg-neutral-50'>
+        {isMultiple&&<ButtonAddAddressProduct number={1} address={selectedLocation} onAddAddress={()=>setScreen('list_address')} />}
+        <div className='flex flex-col pb-6 border-b border-neutral-400 gap-4 last:border-transparent'>
+          {/* <div className='flex gap-1 medium-sm'>
+            <span className='text-neutral-600'>Tipe :</span>
+            <span className='text-neutral-600'>On Road</span>
+          </div> */}
+          {
+            variants?.map(val=>{
+              return(
+                <div className='flex flex-col gap-6' key={val?.ID}>
+                  <div className='flex justify-between w-full'>
+                    <div className='flex flex-col gap-3'>
+                      <span className='medium-sm'>{val?.KeyName}</span>
+                      {val?.DiscountPercentage?<span className='flex items-center gap-1'>
+                        <strike className='text-neutral-600 font-medium text-[10px]'>{numberFormatMoney(val?.OriginalPrice)}</strike>
+                        <span className='bg-error-400 rounded text-neutral-50 semi-xs px-1'>{val?.DiscountPercentage} OFF</span>
+                      </span>:''}
+                      <span className='bold-sm'>{numberFormatMoney(val?.Price)}</span>
+                      <span className='text-error-400 text-[10px] font-bold'>Tersisa 4 produk</span>
+                    </div>
+                    <ButtonPlusMinus min={0} max={val?.Stock}  />
+                  </div>
+                </div>
+              )
+            })
+          }
+        </div>
+      </div>
+          
+      {isMultiple?<div className='flex py-6 justify-center items-center select-none gap-4 bg-neutral-50'>
+        <IconComponent src={'/icons/Plus.svg'} classname={'icon-blue'} />
+        <span className='medium-sm text-primary-700'>Tambah Alamat</span>
+      </div>:''}
+      <ButtonBottomMobile onToggle={()=>setIsMultiple(!isMultiple)} defaultValueToggle={isMultiple} toggleLabelActive={'Saya ingin mengirim ke banyak alamat'} textLeft={'Tambah ke Troli'} textRight={'Beli Sekarang'} />
+    </div>
+  )
+}
+
+export default MultipleAlamatScreen

@@ -1,0 +1,313 @@
+"use client";
+import { useState, useEffect } from "react";
+import SWRHandler from "@/services/useSWRHook";
+import useWishlist from "@/store/wishlist";
+import Toast from "../Toast/Toast";
+import toast from "@/store/toast";
+import Modal from "@/components/Modals/modal";
+import Input from "@/components/Input/Input";
+import DataNotFound from "../DataNotFound/DataNotFound";
+import ImageComponent from "../ImageComponent/ImageComponent";
+import { X } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+
+import useAlbumStore from "@/store/album";
+import ModalComponent from "../Modals/ModalComponent";
+const FavoriteModal = ({ isOpen, onClose, children, data,refreshAlbum }) => {
+  const { setModalNewAlbum,idProductWishlist } = useWishlist();
+  const [ open,setOpen ] = useState(isOpen);
+  const { useSWRMutateHook } = SWRHandler();
+  const [target,setTarget] = useState(0);
+  const [triggerWishlist,setTriggerWishlist] = useState(0)
+  const { t } = useLanguage();
+  const { data: resMoveAlbum, trigger: moveOption } = useSWRMutateHook(
+    `${process.env.NEXT_PUBLIC_GLOBAL_API}v1/muatparts/albums/${target}/items`,
+    "POST"
+  );
+  const { setShowToast, setDataToast } = toast();
+  const addAlbumNew = () => {
+    onClose();
+    setModalNewAlbum(true);
+  };
+
+  useEffect(() => {
+    if(target != 0) {
+      moveOption({
+        productIds: [idProductWishlist]
+      })
+      setShowToast(true);
+      refreshAlbum(`v1/muatparts/albums`);
+      setDataToast({
+        type: "success",
+        message: "Berhasil memindahkan album",
+      });
+      setOpen(false)
+      onClose();
+    } 
+  },[triggerWishlist])
+
+  const moveAlbum = (item) => {
+    setTarget(() => {
+      return item.id
+    })
+    setTriggerWishlist(Math.round(Math.random() * 99999) );
+  }
+
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+      <div className="bg-white rounded-lg w-[471px] relative">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+        >
+          <X className="w-5 h-5 text-primary-700 " />
+        </button>
+
+        {/* Header */}
+        <div className="px-[24px] ">
+          <div className="p-6 py-6 pb-3 mt-4 !px-[24px]">
+            <div className="flex flex-row justify-between">
+              <div className="flex flex-col">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t("labelTersimpanDifavorit")}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">{t("labelSimpanJugakeAlbum")}
+                </p>
+              </div>
+              <span className="text-[#176cf7] text-[12px] ">{t("labelCekFavoritKamu")}
+              </span>
+            </div>
+          </div>
+          {data?.Data?.albums?.length > 1 ? (
+            data?.Data?.albums.map(
+              (item) =>
+                item.type != "GENERAL" && (
+                  <div className="px-6 py-3 cursor-pointer" onClick={() => moveAlbum(item)}>
+                    <div className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg">
+                      <div className="p-2 bg-white border-solid border-[#d7d7d7] rounded-lg">
+                        <ImageComponent
+                          width={20}
+                          className={`w-6 h-6 rounded`}
+                          src="/img/daftarprodukicon.png"
+                          height={30}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {item.itemCount} {t("labelAlbumBarang")}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+            )
+          ) : (
+            <DataNotFound title="Kamu Belum Punya Album" type="data">
+              <div className="font-bold text-[16px] text-center text-[#7b7b7b]">
+               {t("labelKamuBelumPunyaAlbum")}
+              </div>
+              <p className="text-[12px] text-center font-medium text-[#7b7b7b]">
+              {t("labelFavoritPunyaFItur")}
+              </p>
+            </DataNotFound>
+          )}
+          {/* Content area */}
+
+          {/* Action buttons */}
+        </div>
+        <div className="p-6 pt-3">
+          <button
+            onClick={addAlbumNew}
+            className="w-full bg-blue-500 text-white py-2.5 rounded-lg font-medium hover:bg-blue-600"
+          >
+            {t("labelTambahalbumBaru")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AlbumWishlist = () => {
+  const { setDataAlbum, setFetchAlbum, setFetchDetail, modalMoveAlbum, setModalMoveAlbum } =
+    useAlbumStore();
+  const { t } = useLanguage();
+  const {
+    modalNewAlbum,
+    setModalNewAlbum,
+    modalListFavorite,
+    setModalListFavorite,
+    setModalEditAlbum,
+    modalEditAlbum,
+    valueEditWishlist,
+  } = useWishlist();
+  const [formAlbumText, setFormAlbumText] = useState("");
+  const [formAlbumTextEdit, setFormAlbumTextEdit] = useState(
+    valueEditWishlist.name
+  );
+  const { useSWRHook, useSWRMutateHook } = SWRHandler();
+  const { setShowToast, setDataToast } = toast();
+  const { data: resAddAlbum, trigger: typeOptions } = useSWRMutateHook(
+    `${process.env.NEXT_PUBLIC_GLOBAL_API}v1/muatparts/albums`,
+    "POST"
+  );
+  const { data: resEditAlbum, trigger: triggerUpdateAlbum } = useSWRMutateHook(
+    `v1/muatparts/albums/${valueEditWishlist.id}`,
+    "PUT"
+  );
+  const { data: albumList,mutate:refreshAlbum } = useSWRHook(`v1/muatparts/albums`);
+
+  useEffect(() => {
+    // if (albumList) {
+    //   setDataAlbum(albumList.data.Data.albums);
+    // }
+  }, [albumList])
+
+  useEffect(() => {
+    setFormAlbumTextEdit(valueEditWishlist.name);
+  }, [valueEditWishlist]);
+
+  const onSave = () => {
+    typeOptions({
+      name: formAlbumText,
+    });
+    setShowToast(true);
+    setModalNewAlbum(false);
+    refreshAlbum(`v1/muatparts/albums`)
+    setDataToast({
+      type: "success",
+      message: "Berhasil menambah nama album",
+    });
+  };
+
+  const onSaveUpdate = () => {
+    triggerUpdateAlbum({
+      name: formAlbumTextEdit,
+    });
+    setShowToast(true);
+    setModalEditAlbum(false);
+    refreshAlbum(`v1/muatparts/albums`)
+    setDataToast({
+      type: "success",
+      message: "Berhasil mengubah nama album",
+    });
+  };
+
+  useEffect(() => {
+    if (resAddAlbum || resEditAlbum) {
+      setFetchAlbum(true);
+    }
+  }, [resAddAlbum, resEditAlbum]);
+
+  useEffect(() => {
+    if (resEditAlbum) {
+      setFetchDetail(true);
+    }
+  }, [resEditAlbum]);
+
+  return (
+    <>
+      <Modal
+        isOpen={modalNewAlbum}
+        setIsOpen={setModalNewAlbum}
+        closeArea={false}
+        closeBtn={true}
+        action1={{
+          action: () => setModalNewAlbum(false),
+          text: t("labelBatalButton"),
+          style: "outline",
+          color: "#176CF7",
+          customStyle: {
+            width: "112px",
+          },
+        }}
+        action2={{
+          action: onSave,
+          text: t("labelSimpanButton"),
+          style: "full",
+          color: "#176CF7",
+          customStyle: {
+            width: "112px",
+            color: "#ffffff",
+          },
+        }}
+      >
+        <div className="flex justify-center align-middle text-center px-[24px] flex-col gap-[24px]">
+          <div
+            className={`flex justify-center flex-col items-center font-[700] text-[16px] leading-[19.2px] text-[#000000] text-center`}
+          >
+           {t("labelTambahalbumBaru")}
+          </div>
+          <div className="flex justify-center gap-8px">
+            <Input
+              maxLength="20"
+              classname="w-[338px]"
+              changeEvent={(event) => setFormAlbumText(event.target.value)}
+              supportiveText={{ title: "", desc: `${formAlbumText.length}/20` }}
+              placeholder={t("labelMasukkanNamaAlbum")}
+            />
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        isOpen={modalEditAlbum}
+        setIsOpen={setModalEditAlbum}
+        closeArea={false}
+        closeBtn={true}
+        action1={{
+          action: () => setModalEditAlbum(false),
+          text: t("labelBatalButton"),
+          style: "outline",
+          color: "#176CF7",
+          customStyle: {
+            width: "112px",
+          },
+        }}
+        action2={{
+          action: onSaveUpdate,
+          text: t("labelSimpanButton"),
+          style: "full",
+          color: "#176CF7",
+          customStyle: {
+            width: "112px",
+            color: "#ffffff",
+          },
+        }}
+      >
+        <div className="flex justify-center align-middle text-center px-[24px] flex-col gap-[24px]">
+          <div
+            className={`flex justify-center flex-col items-center font-[700] text-[16px] leading-[19.2px] text-[#000000] text-center`}
+          >
+            {t("labelUbahNamaAlbum")}
+          </div>
+          <div className="flex justify-center gap-8px">
+            <Input
+              maxLength="20"
+              classname="w-[338px]"
+              changeEvent={(event) => setFormAlbumTextEdit(event.target.value)}
+              supportiveText={{
+                title: "",
+                desc: `${formAlbumTextEdit.length}/20`,
+              }}
+              value={formAlbumTextEdit}
+              placeholder={t("labelUbahNamaAlbum")}
+            />
+          </div>
+        </div>
+      </Modal>
+      <FavoriteModal
+        isOpen={modalListFavorite}
+        data={albumList}
+        refreshAlbum={refreshAlbum}
+        onClose={() => setModalListFavorite(false)}
+      />
+    </>
+  );
+};
+
+export default AlbumWishlist;

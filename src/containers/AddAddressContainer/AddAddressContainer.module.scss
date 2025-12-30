@@ -1,0 +1,21 @@
+
+.main{
+    display:flex;
+}
+.info_icon{
+    g{
+        circle{
+            stroke: var(--primary-700);
+        }
+        rect{
+            stroke: var(--primary-700);
+            fill: var(--primary-700);
+            
+        }
+    }
+}
+.bookmark{
+    path{
+        fill: var(--neutral-700);
+    }
+}

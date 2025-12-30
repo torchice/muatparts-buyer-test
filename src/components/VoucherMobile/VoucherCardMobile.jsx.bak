@@ -1,0 +1,164 @@
+import React , { useMemo } from "react";
+import { formatCurrency } from "@/utils/currency";
+import Image from "next/image";
+import IconComponent from "../IconComponent/IconComponent";
+// 25.11 Ronda Live Mei LB - 0141
+import { useCustomRouter } from "@/libs/CustomRoute";
+
+const VoucherCardMobile = ({ voucher, type, selected=null, handleClick, error=null }) => {
+	const router = useCustomRouter();	
+
+	const renderVoucherButton = () => {
+		if(voucher?.is_used == 1) return type === "voucher-list-seller" ? "Telah Klaim" : "Telah Digunakan";
+		else if(selected) return "Dipakai";
+		else if(type === "my-voucher") return "Gunakan";
+		else if(type === "voucher-list-checkout") return "Pakai";
+		else if(type === "voucher-list-seller") return "Klaim";
+	}
+
+	const discountValue = useMemo(() => {
+		const value = voucher.discountValue;
+		let valueStr =
+			voucher.discountType === "Persentase"
+				? `${new Intl.NumberFormat("id-ID").format(value)}%`
+				: `${formatCurrency(value, true)}`;
+
+		// 24.THP 2-MOD001-MP-024 QC PLAN-WEB-MUATPARTS VOUCHER BUYER LB 0020
+
+		// 24.THP 2-MOD001-MP-024 QC PLAN-WEB-MUATPARTS VOUCHER BUYER LB 0033
+
+		if(voucher.discountType === "Persentase")
+		{
+			return `Diskon ${valueStr} ${voucher?.discountMax != '0.00' ? `, maks. potongan ${formatCurrency(voucher.discountMax,true)}` : ``}`;
+		}
+		else
+		{
+			return `Diskon ${valueStr}`;
+		}
+
+	}, [voucher]);
+
+	const isNoQuotaLeft = useMemo(() => {
+		return voucher.usageCount >= voucher.usageQuota;
+	}, [voucher]);
+	const isLessThenAWeek = useMemo(() => voucher.daysLeft < 7, [voucher]);
+	const isLessThanADay = useMemo(() => voucher.daysLeft <= 1, [voucher]);
+	const expiredText = useMemo(() => {
+		if (isNoQuotaLeft) return "Kuota Habis";
+
+		const startDate = new Date(voucher.startDate);
+		const expiredDate = new Date(voucher.expiredAt);
+		const daysLeft = voucher.daysLeft;
+		const hoursLeft = voucher.hoursLeft;
+		const format = new Intl.DateTimeFormat("id-ID", {
+			day: "2-digit",
+			month: "long",
+			year: "numeric",
+		});
+
+		if (daysLeft >= 7)
+		{
+			return `${format.format(startDate)} - ${format.format(
+				expiredDate
+			)}`;
+		}
+		else if (daysLeft < 7 && daysLeft > 0) return `Berakhir Pada ${daysLeft} Hari Lagi`;
+
+		else if (daysLeft === 0 && hoursLeft > 1) {
+			if(hoursLeft > 1) return `Sisa ${hoursLeft} Jam Lagi`;
+			else return `Kurang 1 Jam Lagi`;
+		}
+	}, [voucher]);
+
+	const usagePercent = useMemo(() => {
+		const max = voucher.usageQuota;
+		const used = voucher.usageCount;
+		const percent = (used / max) * 100;
+
+		return percent;
+	}, [voucher]);
+
+	return (
+		<div className="flex flex-col gap-2 w-full">
+			<div className={`flex flex-col w-full relative rounded-md border border-solid 
+				${
+					error === null 
+						? selected !== null
+							? selected === true 
+								? "bg-primary-50 border-primary-700" : "border-neutral-200"
+								: voucher?.is_used == 1 
+									? "bg-neutral-200 border-neutral-300" 
+									: "bg-neutral-50 border-neutral-300"
+								
+						: "border-error-400"
+				}
+				`}>
+				<div className="flex relative items-start w-full px-4 pt-3 gap-2.5">
+					<Image
+						src="/img/temp-voucher.png"
+						width="68"
+						height="68"
+					/>
+					<div className="flex flex-col gap-2 flex-1 ">
+						<div className="text-[10px] text-neutral-900 font-bold">
+							{voucher.kode}
+						</div>
+						<ul className="list-disc pl-3 text-xs">
+							<li className="text-[10px] font-medium text-neutral-900s">{discountValue} </li>
+							<li className="text-[10px] font-medium text-neutral-900s">
+								{`Min. Transaksi ${formatCurrency(
+									voucher.transactionMin,
+									true
+								)}`}
+							</li>
+						</ul>
+						<div className="text-xs">
+							<div className="bg-neutral-200 w-full h-[10px] rounded-full overflow-hidden py-[2px] px-0.5">
+								<div
+									className="bg-primary-700 h-full rounded-full"
+									style={{ width: `${usagePercent}%` }}
+								/>
+							</div>
+							<p className="mt-1 text-[8px] font-medium text-neutral-900">
+								Terpakai{" "}
+								<span className="font-bold text-neutral-900">{usagePercent}%</span>
+							</p>
+						</div>
+					</div>
+					<button
+						type="button"
+						className="absolute top-[12px] right-[12px]"
+						onClick={() => router.push(`/voucher/buyer/${voucher.uuid}`)}
+					>
+						<IconComponent src="/icons/info_blue.svg" color="primary"/>
+					</button>
+				</div>
+				<div
+					className={`mt-3.5  w-full border-t border-dashed border-zinc-300 relative z-100 after:block  after:h-4 after:w-4 after:bg-[#f8f8f8] after:border-r  after:rounded-full 
+					${error !== null ? "after:border-error-400 before:border-error-400" : selected ? "after:border-primary-700 before:border-primary-700" : "after:border-zinc-300 before:border-zinc-300"} after:absolute after:-top-2 after:-left-2 
+					before:block  before:h-4 before:w-4 before:bg-[#f8f8f8] before:border-l  before:rounded-full  before:absolute before:-top-2 before:-right-2
+					`}
+				/>
+				<div className="flex mt-3 px-4 pt-2 pb-3 w-full justify-between items-center">
+					<div
+						className={`text-[10px] font-medium ${
+							isLessThenAWeek || isNoQuotaLeft || isLessThanADay
+								? "text-red-700"
+								: "text-neutral-500"
+						}`}
+					>
+						{expiredText}
+					</div>
+					<button 
+						onClick={handleClick}
+						className={`text-xs font-bold ${voucher?.is_used == 1 ? "text-neutral-400" : "text-primary-700"}`}>
+						{renderVoucherButton()}
+					</button>
+				</div>
+			</div>
+			{error !== null && <label className="text-error-400 medium-xs">{error.message}</label>}
+		</div>
+	);
+};
+
+export default VoucherCardMobile;

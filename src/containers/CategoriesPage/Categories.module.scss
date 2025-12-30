@@ -1,0 +1,31 @@
+
+.main{
+    display:flex;
+    // max-width: 1280px;
+    width: 100%;
+    padding-top: 24px;
+    flex-direction: column;
+    gap: 24px;
+    @media (max-width:500px) {
+        padding-inline: unset;
+    }
+}
+.breadcrumb{
+    div{
+        color:var(--neutral-600) !important;
+    }
+    div:last-child{
+        color:var(--primary-700) !important;
+    }
+    
+}
+.muatPlus{
+    background: linear-gradient(103.69deg, #C22716 10%, #5C120A 121.05%);
+    width: 100%;
+    height: fit-content;
+    padding: 30px 24px 120px 24px;
+    gap: 40px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}

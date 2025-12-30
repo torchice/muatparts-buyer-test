@@ -1,0 +1,21 @@
+export const resPaymentMethods = {
+	"Message": {
+		"Code": 200,
+		"Text": "OK"
+	},
+	"Data": [
+		{
+			"channel": "VA",
+			"category": "Virtual Account",
+			"icon": "va-channel-icon.png",
+			"guide": "Pilih metode pembayaran Virtual Account untuk mendapatkan nomor Virtual Account dan selesaikan pembayaran melalui ATM, Internet Banking, atau Mobile Banking.",
+		},
+		{
+			"channel": "CREDIT_CARD",
+			"category": "Kartu Kredit",
+			"icon": "credit-card-channel-icon.png",
+			"guide": "Pilih metode pembayaran Kartu Kredit untuk melakukan pembayaran dengan kartu kredit Visa atau Mastercard.",
+		}
+	],
+	"Type": "/v1/payment/methods"
+}

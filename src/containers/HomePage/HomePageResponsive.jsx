@@ -1,0 +1,341 @@
+import { useHeader } from "@/common/ResponsiveContext";
+import Image from "next/image";
+import React, { Fragment, useEffect, useState } from "react";
+import ProductComponent from "@/components/ProductComponent/ProductComponent";
+import style from "./HomePage.module.scss";
+import Bubble from "@/components/Bubble/Bubble";
+import ScreenCategories from "./ScreenCategories";
+import { categoriesZustand } from "@/store/products/categoriesZustand";
+import MultipleItems from "@/components/ReactSlick/MultipleItems";
+import ImageComponent from "@/components/ImageComponent/ImageComponent";
+import { lineClamp } from "@/libs/TypographServices";
+// LBM - Multibahasa Optimization
+import { useLanguage } from "@/context/LanguageContext";
+
+function HomePageResponsive({
+  lastSeenProducts,
+  headerImages,
+  bannerImages,
+  promotionImages,
+  joinedSellers,
+  mostVisitedProducts,
+  youMightLike,
+}) {
+  const {
+    setAppBar,
+    clearScreen, // reset appBar
+    setScreen, // set screen
+    screen, // get screen,
+    setGlobalPadding,
+  } = useHeader();
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0768
+  const { t } = useLanguage();
+  const [getSelectedProductList, setSelectedProductList] = useState(
+    "Produk yang banyak dikunjungi"
+  );
+  const { categories, setCategory: setCategoryZustand } = categoriesZustand();
+  const [getSelectedCategory, setSelectedCategory] = useState();
+  useEffect(() => {
+    setAppBar({
+      bottomTabNavigation: true,
+      onSubmit: true,
+      dataBottomTabNavigation: { title: "Home", link: "/", onClick: null },
+    });
+    setGlobalPadding(false);
+  }, []);
+  const [getCategory, setCategory] = useState(null);
+  if (screen === "screenCategories")
+    return <ScreenCategories data={getCategory} directlyClick />;
+  // if (screen === "screenSubCategories")
+  //   return <ScreenCategories data={getCategory} />;
+  // main screen
+  return (
+    <div className="flex flex-col pb-6">
+      {/* Carousel */}
+      <MultipleItems
+        images={headerImages?.map((val) => val?.imagePath)}
+        className="h-[144px]"
+        settings={{
+          slidesToShow: 1,
+          slidesToScroll: 1,
+          autoplay: true,
+          autoplaySpeed: 3000,
+          dots: true,
+          arrows: false,
+        }}
+        size={1000}
+        urls={headerImages?.map((val) => val?.linkUrl)}
+      />
+      {/* Kategori */}
+      <section className="flex flex-col gap-4 py-4 px-4">
+        <h1 className="text-base text-neutral-900 font-semibold">
+          {t("BuyerIndexKategori")}
+        </h1>
+        <div className="flex gap-[6px]">
+          {categories?.map((val) => (
+            <div
+              key={val.id}
+              className="flex w-[46px] h-[82px]  flex-col gap-1 justify-start"
+              onClick={() => {
+                setCategory(val);
+                setCategoryZustand(val);
+                setScreen("screenCategories");
+                setAppBar({
+                  appBarType: "header_title_modal_secondary",
+                  componentBackType: "close",
+                  title: lineClamp(
+                    `${t("BuyerIndexKategori")} ` + val.value,
+                    35
+                  ),
+                  onBack: () => {
+                    setAppBar({ appBarType: "", title: "" });
+                    setScreen("");
+                  },
+                  renderActionButton: (
+                    <span className="w-4 bg-transparent"></span>
+                  ),
+                });
+              }}
+            >
+              <div className="border border-[#d7d7d7] rounded-md overflow-hidden w-12 h-12">
+                {val?.icon ? (
+                  <ImageComponent
+                    src={val?.icon}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-contain"
+                    alt={val.value}
+                  />
+                ) : (
+                  <span className="w-full h-full"></span>
+                )}
+              </div>
+              <span className="text-neutral-900 font-medium text-[10px] text-center line-clamp-2">
+                {val?.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+      {/* Terakhir Dilihat */}
+      {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB-0555 */}
+      {lastSeenProducts.length > 0 && (
+        <section className={`flex flex-col gap-4 w-full my-6 pl-4`}>
+          <h1 className="text-neutral-900 font-semibold text-base">
+            {t("HomepageBuyerMuatpartsLastSeen")}
+          </h1>
+          <div
+            className={`${style.sectionHideScroll} w-full flex gap-2 overflow-x-auto pr-2`}
+          >
+            {[...lastSeenProducts]?.map((val) => {
+              return (
+                <div key={val.id}>
+                  <ProductComponent {...val} />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+      {/* Carousel */}
+      <MultipleItems
+        images={bannerImages?.map((val) => val.ImageApp)}
+        settings={{
+          slidesToShow: 1,
+          slidesToScroll: 1,
+          autoplay: true,
+          autoplaySpeed: 3000,
+          dots: true,
+          arrows: false,
+        }}
+        size={1000}
+        className="h-[144px]"
+        urls={bannerImages?.map((val) => val.Url)}
+      />
+      {/* Buble */}
+      <section
+        className={`${style.sectionHideScroll} flex gap-2 w-full overflow-x-auto py-4 pl-4 border-b border-neutral-400`}
+      >
+        <Bubble
+          onClick={() =>
+            setSelectedProductList("Produk yang banyak dikunjungi")
+          }
+          classname={`${
+            getSelectedProductList === "Produk yang banyak dikunjungi"
+              ? "bg-primary-50"
+              : "!bg-neutral-50 !border-neutral-200 !text-neutral-900"
+          } py-2 px-3 text-sm font-medium  !max-w-none whitespace-nowrap`}
+        >
+          {t("produkyangbanyakdikunjungi")}
+        </Bubble>
+        <Bubble
+          onClick={() => setSelectedProductList("Mungkin kamu juga suka")}
+          classname={`${
+            getSelectedProductList === "Mungkin kamu juga suka"
+              ? "bg-primary-50"
+              : "!bg-neutral-50 !border-neutral-200 !text-neutral-900"
+          } py-2 px-3 text-sm font-medium !w-fit !max-w-none whitespace-nowrap`}
+        >
+          {t("titleMungkinKamuSukaBuyer")}
+        </Bubble>
+        {/* <Bubble
+          onClick={()=>setSelectedProductList('Mungkin kamu juga suka')}
+          classname={`${getSelectedProductList==='Mungkin kamu juga suka'?'bg-primary-50':'!bg-neutral-50 !border-neutral-200 !text-neutral-900'} py-2 px-3 text-sm font-medium !w-fit !max-w-none whitespace-nowrap`}
+        >
+          Mungkin kamu juga suka
+        </Bubble> */}
+      </section>
+      {/* list products */}
+      <section className={`h-fit grid grid-cols-2 gap-2 p-4 !w-full`}>
+        {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0600 */}
+        {getSelectedProductList === "Produk yang banyak dikunjungi"
+          ? mostVisitedProducts?.map((val) => {
+              return (
+                <ProductComponent
+                  parentClassname={"!w-auto"}
+                  classname={"!w-auto"}
+                  key={val.id}
+                  {...val}
+                />
+              );
+            })
+          : getSelectedProductList === "Mungkin kamu juga suka"
+          ? youMightLike?.map((val) => {
+              return (
+                <ProductComponent
+                  parentClassname={"!w-auto"}
+                  classname={"!w-full"}
+                  key={val.id}
+                  {...val}
+                />
+              );
+            })
+          : ""}
+        {lastSeenProducts?.products?.map((val) => {
+          return <ProductComponent key={val.id} {...val} />;
+        })}
+      </section>
+      {/* carousel */}
+      <MultipleItems
+        images={promotionImages?.map((val) => val.imagePath)}
+        settings={{
+          slidesToShow: 1,
+          slidesToScroll: 1,
+          autoplay: true,
+          autoplaySpeed: 3000,
+          dots: true,
+          arrows: false,
+        }}
+        className="h-[144px]"
+        urls={promotionImages?.map((val) => val.linkUrl)}
+        size={1000}
+      />
+      {/* keuntungan */}
+      {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 LB - 0942 */}
+      <section className="flex flex-col gap-[84px]">
+        <h1 className="text-xl text-neutral-900 font-bold text-center">
+          {t("HomepageBuyerMuatpartsShoppingBenefits")}
+        </h1>
+        <div className="w-full bg-neutral-50 rounded-t-[40px] flex justify-center items-center px-4">
+          <div className="grid grid-cols-2 gap-6 -mt-12">
+            <div className="flex flex-col justify-start gap-3 items-center">
+              {/* Improvement Konten Marketing by Ce Nola */}
+              <Image
+                src={"/img/web-keuntungan-1-new.webp"}
+                alt="keuntungan"
+                width={100}
+                height={100}
+                className="size-[100px] object-cover"
+              />
+              <div>
+                <p className="text-center text-sm text-neutral-900 font-semibold">
+                  {t("LabelkeuntunganBelanjaPencarianMudah")}
+                </p>
+                <p className="text-center text-[10px]">
+                  {t(
+                    "LabelkeuntunganBelanjaCukupmasukkanjenismobilnamasparepartsatauuploadfotospareparts."
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col justify-start gap-3 items-center">
+              <Image
+                src={"/img/web-keuntungan-2-new.webp"}
+                alt="keuntungan"
+                width={100}
+                height={100}
+                className="size-[100px] object-cover"
+              />
+              <div>
+                <p className="text-center text-sm text-neutral-900 font-semibold">
+                  {t("LabelkeuntunganBelanjaPembayaranAman")}
+                </p>
+                <p className="text-center text-[10px]">
+                  {t(
+                    "LabelkeuntunganBelanjaProsespembayaranamancepatdantransparanbelanjajaditenang"
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col justify-start gap-3 items-center">
+              <Image
+                // LBM - fix wrong image URL
+                src={"/img/web-keuntungan-3-new.webp"}
+                alt="keuntungan"
+                width={100}
+                height={100}
+              />
+              <div>
+                <p className="text-center text-sm text-neutral-900 font-semibold">
+                  {t("LabelkeuntunganBelanjaPengirimanTerpercaya")}
+                </p>
+                <p className="text-center text-[10px]">
+                  {t(
+                    "LabelkeuntunganBelanjaMuatpartsbekerjasamadenganmitrapengirimanyanghandaldanTerpercaya"
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col justify-start gap-3 items-center">
+              <Image
+                src={"/img/web-keuntungan-4-new.webp"}
+                alt="keuntungan"
+                width={100}
+                height={100}
+              />
+              <div>
+                <p className="text-center text-sm text-neutral-900 font-semibold">
+                  {t("LabelkeuntunganBelanjaSparepartLengkap")}
+                </p>
+                <p className="text-center text-[10px]">
+                  {t(
+                    "LabelkeuntunganBelanjaBanyaknyasparepartberkualitasdenganpilihanlengkapdanterjangkau."
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* carousel */}
+      <section className="flex flex-col bg-neutral-50 py-[60px] px-4 mx-7">
+        <h1 className="text-xl text-neutral-900 font-bold text-center mb-5">
+          {t("HeadingJoinedSellers")}
+        </h1>
+        <MultipleItems
+          images={joinedSellers.map((seller) => seller.logo)}
+          settings={{
+            slidesToShow: joinedSellers.length < 2 ? joinedSellers.length : 2,
+            slidesToScroll: 1,
+            autoplay: false,
+          }}
+          size={64}
+          arrowPadding="32px"
+          className="mx-auto aspect-square object-contain"
+        />
+      </section>
+    </div>
+  );
+}
+
+export default HomePageResponsive;

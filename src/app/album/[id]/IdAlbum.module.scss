@@ -1,0 +1,62 @@
+.main {
+  display: flex;
+  padding: 24px 40px 14px;
+  margin: 0px auto;
+  max-width: 1280px;
+  gap: 30px;
+  position: relative;
+}
+
+.filter {
+  position: relative;
+  display: flex;
+  width: 104px;
+  height: 32px;
+  align-items: center;
+  border-radius: 6px;
+  border: 1px solid var(--neutral-600);
+  justify-content: space-between;
+  background-color: #ffff;
+
+  &.active {
+    border: 1px solid var(--primary-700);
+  }
+}
+
+.filter:hover {
+  border: 1px solid var(--primary-700);
+}
+
+.buttonPlace {
+  font-size: 12px;
+  font-weight: 500;
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  padding-inline: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chevron {
+  transition: transform 0.4s;
+}
+.chevronRotate {
+  transform: rotate(180deg);
+}
+
+.select_product_checkbox > span:first-child {
+  background-color: white !important;
+}
+
+.iconBackRed {
+  path {
+    stroke: #c22716;
+  }
+}
+
+.icon_white {
+  path {
+    stroke: var(--neutral-50);
+  }
+}

@@ -1,0 +1,11 @@
+.icon_primary{
+    path{
+        stroke: var(--primary-700);
+    }
+}
+
+.icon_info_primary{
+    circle, rect{
+        stroke: var(--primary-700);
+    }
+}

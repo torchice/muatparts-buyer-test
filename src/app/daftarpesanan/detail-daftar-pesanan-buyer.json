@@ -1,0 +1,81 @@
+{
+  "Message": { "Code": 200, "Text": "Success" },
+  "Data": {
+    "statusInfo": {
+		"statusInfoSeller": {
+			"title_text": "Pembayaran Berhasil",
+			"subtitle_text": "Pembayaran telah berhasil pada <b>26 Jan 2024 11.51 WIB</b>",
+			"icon": "check",
+			"bg": "success-50",
+			"textColor": "success-400"
+		},
+		"statusInfoBuyer": {
+			"title_text": "Pembayaran Berhasil",
+			"subtitle_text": "Pembayaran telah berhasil pada <b>26 Jan 2024 11.51 WIB</b>",
+			"icon": "check",
+			"bg": "success-50",
+			"textColor": "success-400"
+		}
+	},
+	"paymentDeadline": "2025-01-07T05:02:38.985Z",
+	"paymentMethod": "BCA Virtual Account",
+	"methodLogo": "",
+	"virtualAccount": "56897730751175834156223",
+	"remainingTime": null,
+	"storeOrders": [
+		{
+			"invoiceNumber": "INV/2025/01/06/MPM/24910",
+			"storeName": "TokoHasyim 5",
+			"shippingOrigin": "sarangan",
+			"items": [
+				{
+					"productName": "Kabel Jumper Tronton",
+					"productDetails": "",
+					"quantity": 1,
+					"originalPrice": 150000,
+					"originalPromoPrice": 150000,
+					"discountedPercentage": 0,
+					"note": "Catatan: Mohon Double Packing",
+					"imageUrl": "https://www.youtube.com/watch?v=gNS0bKOP2jM"
+				}
+			],
+			"shippingInfo": {
+				"courier": "Hasyim",
+				"trackingNumber": "346856",
+				"recipientAddress": "Jl. Pelawarna no 20, Kota Kediri, Jawa Timur, 61665",
+				"recipientName": "Joko",
+				"recipientPhone": "081123123123",
+				"note": "Catatan: Mohon Double Packing",
+				"trackingHistory": [
+					{
+						"status": "Pesanan Dibuat",
+						"timestamp": "2025-01-06T05:02:38.943Z",
+						"description": "Pesanan Dibuat",
+						"proofUrl": null
+					}
+				]
+			},
+			"statusSeller": "Pesanan Masuk",
+			"statusBuyer": "Menunggu Pembayaran",
+			"subtotal": "300000",
+			"shippingCost": "0.00",
+			"insuranceCost": "0.00",
+			"weight": 1000,
+			"responseDeadline": "2025-01-08T05:02:38.748Z"
+		}
+	],
+	"applicationFee": "0.00",
+	"totalAmount": "300000.00",
+	"cancellationReason": "",
+	"completedAt": null,
+	"paymentInfo": {
+		"method": "",
+		"subtotal": 300000,
+		"shippingCost": 0,
+		"insuranceCost": 0,
+		"voucherDiscount": 0,
+		"platformFee": "0.00",
+		"total": "300000.00"
+	}
+  }
+}

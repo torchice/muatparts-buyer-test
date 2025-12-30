@@ -1,0 +1,126 @@
+import style from "./Troli.module.scss";
+
+import Checkbox from "../Checkbox/Checkbox";
+import ProductList from "./ProductList";
+
+import { MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+import LocationManagementModalWeb from "@/containers/LocationManagementModalWeb/LocationManagementModalWeb";
+
+const SellerCard = ({
+  items: initialItems,
+  seller,
+  destinationAddress,
+  onDeleteCart,
+  onPutCart,
+}) => {
+  const PUT_CART_ENDPOINT = "v1/muatparts/cart/items";
+
+  const [items, setItems] = useState();
+
+  const { useSWRMutateHook } = SWRHandler();
+
+  const { data: resPutCart, trigger: triggerPutCart } = useSWRMutateHook(
+    PUT_CART_ENDPOINT + `batch-update`,
+    "PUT"
+  );
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
+
+  const [checked, setChecked] = useState(false);
+  const [changeAddress, setChangeAddress] = useState(false);
+
+  const allSelected = items?.every((item) => item.Checked);
+  const someSelected = items?.some((item) => item.Checked);
+
+  const updateProduct = (index, updatedProduct) => {
+    setItems((prevItems) => {
+      const newItems = [...prevItems];
+      newItems[index] = updatedProduct;
+      return newItems;
+    });
+  };
+
+  const handleCheck = () => {
+    console.log(items)
+  } 
+
+  // useEffect(() => {
+  //   if (allSelected) {
+  //     setChecked(true);
+  //   } else {
+  //     setChecked(false);
+  //   }
+  // }, [items]);
+
+  return (
+    <>
+      <div className="px-8 pt-5 pb-1 shadow-muatmuat rounded-xl space-y-3">
+        {/* <pre>
+        {JSON.stringify(items, null, 2)}
+      </pre> */}
+
+        <div className="flex justify-between">
+          <Checkbox
+            label={seller.name}
+            checked={allSelected}
+            classname="font-semibold !text-primary-700"
+            onChange={() => handleCheck()}
+          />
+          <div
+            className={`${style.textButtonPrimary} ${
+              someSelected ? style.active : ""
+            }`}
+          >
+            Gunakan Voucher Penjual
+          </div>
+        </div>
+        <div className="flex items-center px-4 py-2 bg-neutral-200 gap-2 rounded-md ml-6">
+          <MapPin size={16} className="text-neutral-700" />
+          <div className="font-medium text-xs capitalize">
+            Dikirim dari : {seller.city?.toLowerCase()}
+          </div>
+        </div>
+        <div className="flex items-center px-4 py-2 gap-2 rounded-md ml-6 border border-neutral-400">
+          <MapPin size={16} className="text-neutral-700" />
+          <div className="font-medium text-xs capitalize">
+            Dikirim ke :{" "}
+            <strong>{destinationAddress.name?.toLowerCase()}</strong>
+          </div>
+          <button
+            className={`ml-auto ${style.textButtonPrimary} ${style.active}`}
+            onClick={() => setChangeAddress(true)}
+          >
+            Ubah Alamat Tujuan
+          </button>
+        </div>
+        <div className="divide-y">
+          {items?.map((product, index) => (
+            <ProductList
+              key={product.id}
+              product={product}
+              index={index}
+              locationId={destinationAddress.id}
+              onDeleteCart={(body) => onDeleteCart(body)}
+              onPutCart={(body) => onPutCart(body)}
+              onUpdateProduct={updateProduct}
+              onCheckedChange={checked}
+            />
+          ))}
+        </div>
+      </div>
+
+      <LocationManagementModalWeb
+        isOpen={changeAddress}
+        setClose={() => setChangeAddress(false)}
+        // onSaveChange={handleSaveAlamatMultiple}
+        // onSelectLocation={(e) => setIndexLocationMultiple(a => ({ ...a, location: e }))}
+        preventDefaultSave={true}
+      />
+    </>
+  );
+};
+
+export default SellerCard;

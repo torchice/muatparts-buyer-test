@@ -1,0 +1,144 @@
+import Button from "@/components/Button/Button";
+import styles from "./StoreHeader.module.scss"
+import IconComponent from "@/components/IconComponent/IconComponent";
+import StoreStats from "./StoreStats";
+import { useLanguage } from "@/context/LanguageContext";
+import ImageComponent from "@/components/ImageComponent/ImageComponent";
+import SWRHandler from "@/services/useSWRHook";
+import { authZustand } from "@/store/auth/authZustand";
+import { userZustand } from "@/store/auth/userZustand";
+import { useCustomRouter } from "@/libs/CustomRoute";
+
+export default function StoreHeader({
+    id,
+    isOnline,
+    location,
+    logo,
+    metrics,
+    name,
+    operationalHours
+}) {
+    const { t } = useLanguage();
+    // FIX BUG Profil Seller Sisi Buyer LB-0048
+    const router = useCustomRouter();
+    const { useSWRMutateHook } = SWRHandler();
+    const { accessToken } = authZustand();
+    const user = userZustand();
+    const { trigger: submitDataRoom } = useSWRMutateHook(
+        `${process.env.NEXT_PUBLIC_CHAT_API}api/rooms/muat-muat`,
+        "POST",
+        null,
+        null,
+        { loginas: "buyer" }
+    );
+    // FIX BUG Profil Seller Sisi Buyer LB-0048
+    const handleChatSeller = () => {
+        const isLogin = accessToken && user?.id
+        if (isLogin) {
+          const body = {
+            recipientMuatId: id,
+            recipientRole: "seller",
+            menuName: "Muatparts",
+            subMenuName: "Muatparts",
+            message: "",
+            initiatorRole: "buyer",
+          };
+          submitDataRoom(body).then((x) => {
+            setTimeout(() => {
+              router.push(
+                `${process.env.NEXT_PUBLIC_CHAT_URL}initiate?initiatorId=&initiatorRole=${
+                  body.initiatorRole
+                }&recipientId=${body.recipientMuatId}&recipientRole=${
+                  body.recipientRole
+                }&menuName=${body.menuName}&subMenuName=${
+                  body.subMenuName
+                }&accessToken=${authZustand.getState().accessToken}&refreshToken=${
+                  authZustand.getState().refreshToken
+                }`
+              );
+            }, 2000);
+          });
+        } else {
+          router.push(`${process.env.NEXT_PUBLIC_INTERNAL_WEB}login`)
+        }
+    };
+    return (
+        <div className="flex flex-col gap-y-6 px-4 pt-5 pb-4 w-full bg-white">
+            <div className="flex gap-3 items-center w-full text-sm font-medium">
+                {/* FIX BUG Pengecekan Ronda Muatparts LB-0132 */}
+                {/* LBM - OLIVER - FIX POSISI LABEL TUTUP - MP - 020 */}
+                <div className="size-[73px] relative">
+                    <div className={`flex items-center justify-center size-[73px] rounded-[50px] overflow-hidden ${logo ? "" : "bg-[#C8C8C8]"}`}>
+                        {/* FIX BUG Profil Seller Sisi Buyer LB-0037 */}
+                        {/* FIX BUG Profil Seller Sisi Buyer LB-0047 */}
+                        {logo ? (
+                            <ImageComponent
+                                loading="lazy"
+                                src={logo}
+                                alt="logo"
+                                // LBM - OLIVER - FIX STYLING FOTO PROFIL SELLER - MP - 020
+                                className="w-full h-full"
+                                width={100}
+                                height={100}
+                            />
+                        ) : (
+                            <ImageComponent
+                                loading="lazy"
+                                src={"/img/seller_logo.png"}
+                                alt="logo"
+                                className="object-contain m-auto aspect-square"
+                                width={46}
+                                height={46}
+                            />
+                        )}
+                    </div>
+                    {!isOnline ? (
+                        <div className="h-5 flex px-1 bg-error-400 top-[58px] left-1/2 -translate-x-1/2 absolute rounded">
+                            <div className='my-auto font-semibold text-[12px] leading-[14.4px] text-neutral-50'>{t("labelClose")}</div>
+                        </div>
+                    ) : null}
+                </div>
+                <div className="flex flex-col gap-y-3 justify-center items-start min-w-[240px]">
+                    {/* FIX BUG Profil Seller Sisi Buyer LB-0042 */}
+                    <div className="font-bold text-[16px] leading-[17.6px] line-clamp-2">
+                        {name}
+                    </div>
+                    <div className="flex gap-1 items-center">
+                        {/* FIX BUG Profil Seller Sisi Buyer LB-0040 */}
+                        <div className={`w-[5px] h-[5px] rounded ${isOnline ? "bg-success-400" : "bg-error-700"}`} />
+                        <div className="text-neutral-700 font-medium text-[14px] leading-[16.8px]">{isOnline ? t("labelOpen") : t("labelClose")}</div>
+                    </div>
+                    <div className="flex gap-3 items-start text-black whitespace-nowrap">
+                        <div className="flex gap-1 items-center">
+                            <IconComponent
+                                src="/icons/location.svg"
+                                width={14}
+                                height={14}
+                            />
+                            <div className="font-medium text-[14px] leading-[16.8px]">{location}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <StoreStats
+                metrics={metrics}
+                operationalHours={operationalHours}
+            />
+            <Button
+                Class="h-8 justify-center flex gap-x-1 max-w-full"
+                color="primary_secondary"
+                // FIX BUG Profil Seller Sisi Buyer LB-0048
+                onClick={handleChatSeller}
+                // FIX BUG Pengecekan Ronda Muatparts LB-0372
+            >
+                <IconComponent
+                    src="/icons/chat-seller.svg"
+                    classname={isOnline ? styles.icon_primary : "icon-gray"}
+                    width={13}
+                    height={12}
+                />
+                <span className={`font-semibold text-[14px] leading-[16.8px] ${isOnline ? "text-primary-700" : "text-neutral-600"}`}>{t("buttonChatSeller")}</span>
+            </Button>
+        </div>
+    );
+}

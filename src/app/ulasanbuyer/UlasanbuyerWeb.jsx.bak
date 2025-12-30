@@ -1,0 +1,280 @@
+import React, { useEffect, useState } from "react";
+import { Sidebar } from "@/components/Sidebar/Sidebar";
+import TabMenu from "@/components/Menu/TabMenu";
+import DataNotFound from "@/components/DataNotFound/DataNotFound";
+import MenungguUlasan from "./MenungguUlasan";
+import UlasanSaya from "./UlasanSaya";
+import Pagination from "./PaginationUlasan";
+import SWRHandler from "@/services/useSWRHook";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import Input from "@/components/Input/Input";
+import { X } from "lucide-react";
+import SortingDropdown from "@/components/SortingDropdown/SortingDropdown";
+import Toast from "@/components/Toast/Toast";
+import menuZus from "@/store/menu";
+import Image from "next/image";
+
+const EmptyReviews = () => (
+  <DataNotFound image="/icons/notulasan.svg">
+    <div className="flex flex-col items-center justify-center gap-2">
+      <span className="text-neutral-600 font-semibold text-base">
+        Belum Ada Ulasan
+      </span>
+      <span className="text-neutral-600 font-semibold text-xs">
+        Tulis Ulasanmu saat pesanan diterima
+      </span>
+    </div>
+  </DataNotFound>
+);
+
+// Search & Filter component that can be disabled when needed
+const SearchFilterBar = ({ 
+  searchInput, 
+  setSearchInput, 
+  handleSearch, 
+  handleClearSearch,
+  sort,
+  handleSort,
+  disabled = false
+}) => {
+  return (
+    <div className="flex items-center gap-3">
+      <Input
+        placeholder="Cari pesanan" 
+        classname="w-60"
+        icon={{
+          left: <IconComponent src="/icons/search.svg" />,
+          right: searchInput && (
+            <X
+              size={16}
+              className="cursor-pointer"
+              onClick={handleClearSearch}
+            />
+          )
+        }}
+        value={searchInput}
+        changeEvent={(e) => setSearchInput(e.target.value)}
+        onKeyDown={handleSearch}  
+      />
+
+      {/* Import the custom SortingDropdown component */}
+      <SortingDropdown
+        onChange={handleSort}  
+        options={[
+          { label: "Terbaru", value: "newest" },
+          { label: "Terlama", value: "oldest" }
+        ]}
+        value={sort}
+        disabled={disabled}
+      />
+    </div>
+  );
+};
+
+// Component for keyword not found state
+const KeywordNotFound = () => (
+  <div className="flex flex-col items-center py-12">
+    <Image 
+      src="/icons/keyword-not-found.svg" 
+      alt="Keyword Tidak Ditemukan"
+      width={150}
+      height={150}
+    />
+    <span className="text-neutral-600 font-semibold text-base mt-4">
+      Keyword Tidak Ditemukan
+    </span>
+  </div>
+);
+
+// 24. THP 2 - MOD001 - MP - 019 - QC Plan - Web - MuatParts - Ulasan Buyer LB - 0011
+export const UlasanBuyer = ({ id, name, image, variant }) => {
+  return (
+    <div className="flex gap-2">
+      <Image
+        src={image}
+        alt={name}
+        width={56}
+        height={56}
+        className="w-14 h-14 object-cover rounded-md"
+      />
+      <div className="flex flex-col gap-1">
+        <span className="font-bold text-xs">{name}</span>
+        {Array.isArray(variant) ? (
+          // If variant is an array, map through it
+          variant.map((item, idx) => (
+            <span key={idx} className="text-neutral-600 font-medium text-xs">
+              {item.name} - {item.value}
+            </span>
+          ))
+        ) : (
+          // If variant is an object with name and value properties
+          variant?.name && variant?.value && (
+            <span className="text-neutral-600 font-medium text-xs">
+              {variant.name} - {variant.value}
+            </span>
+          )
+        )}
+      </div>
+    </div>
+  );
+};
+// 24. THP 2 - MOD001 - MP - 019 - QC Plan - Web - MuatParts - Ulasan Buyer LB - 0011
+
+const UlasanbuyerWeb = ({ data_count }) => {
+  const [sort, setSort] = useState("newest");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
+  const { useSWRHook } = SWRHandler();
+  const { menuZ, setMenuZ } = menuZus();
+
+  const getEndpoint = () => {
+    const baseUrl = "/v1/muatparts/reviews";
+    const path = menuZ?.id === 2 ? "submitted" : "pending";
+    const queryString = `?limit=${perPage}&page=${currentPage}&sort=${sort}${search ? `&search=${search}` : ''}`;
+    return `${baseUrl}/${path}${queryString}`;
+  };
+
+  const { data: listData, mutate, isLoading } = useSWRHook(getEndpoint());
+
+  const menus = [
+    {
+      id: 1,
+      name: "Menunggu Ulasan",
+      notif: listData?.Data?.pendingCount ?? 0,
+    },
+    {
+      id: 2,
+      name: "Ulasan Saya",
+      notif: listData?.Data?.submittedCount ?? 0,
+    }
+  ];
+
+  const handleTabChange = () => {
+    // Toggle between tab 1 and 2
+    const nextMenuId = menuZ?.id === 1 ? 2 : 1;
+    const selectedMenu = menus.find(menu => menu.id === nextMenuId);
+    
+    setMenuZ({ 
+      id: selectedMenu.id, 
+      value: selectedMenu.name 
+    });
+
+    setCurrentPage(1);
+    setSearch("");
+    setSearchInput("");
+    setIsSearching(false);
+  };
+
+  useEffect(() => {
+    mutate();
+  }, [menuZ?.id, currentPage, perPage, sort, search]);
+
+  const handleSearch = (e) => {
+    if (e.key === "Enter") {
+      setSearch(searchInput.trim());
+      setCurrentPage(1);
+      setIsSearching(searchInput.trim() !== "");
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setSearch("");
+    setCurrentPage(1);
+    setIsSearching(false);
+    mutate();
+  };
+
+  const handleSort = (value) => {
+    setSort(value);
+    setCurrentPage(1);
+    mutate();
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    mutate();
+  };
+
+  const handlePerPageChange = (newPerPage) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1);
+    mutate();
+  };
+
+  const hasData = listData?.Data?.reviews?.length > 0;
+  const showKeywordNotFound = isSearching && !hasData;
+  const showEmptyState = !isSearching && !hasData;
+
+  return (
+    <div className="flex gap-[38px] px-[40px] pt-[20px]">
+      <Toast />
+      <Sidebar />
+      
+      <div className="w-full">
+        <h1 className="text-xl font-bold">Ulasan</h1>
+        
+        <div className="my-4">
+          <TabMenu 
+            menu={menus}
+            onclick={handleTabChange}
+            type="buyer"
+          />
+        </div>
+
+        <div className="rounded-xl shadow-muatmuat">
+          <div className="p-6 space-y-4">
+            {/* Search and filter always visible even when no results found */}
+            <SearchFilterBar 
+              searchInput={searchInput}
+              setSearchInput={setSearchInput}
+              handleSearch={handleSearch}
+              handleClearSearch={handleClearSearch}
+              sort={sort}
+              handleSort={handleSort}
+              disabled={!hasData}
+            />
+
+            {hasData ? (
+              <>
+                {menuZ?.id === 1 ? (
+                  <MenungguUlasan data={listData.Data.reviews} />
+                ) : (
+                  <UlasanSaya 
+                    sort={sort}
+                    setSort={setSort}
+                    data={listData.Data.reviews}
+                  />
+                )}
+
+                {listData?.Data?.pagination && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={listData.Data.pagination.totalPages}
+                    perPage={perPage}
+                    onPageChange={handlePageChange}
+                    onPerPageChange={handlePerPageChange}
+                  />
+                )}
+              </>
+            ) : (
+              <div className="py-12 flex justify-center">
+                {showKeywordNotFound ? (
+                  <KeywordNotFound />
+                ) : (
+                  <EmptyReviews />
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default UlasanbuyerWeb;

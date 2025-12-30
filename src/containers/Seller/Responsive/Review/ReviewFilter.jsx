@@ -1,0 +1,193 @@
+import Bottomsheet from "@/components/Bottomsheet/Bottomsheet";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import RadioButton from "@/components/Radio/RadioButton";
+import toast from "@/store/toast";
+import styles from "./ReviewFilter.module.scss"
+import { useHeader } from "@/common/ResponsiveContext";
+import { useLanguage } from "@/context/LanguageContext";
+// 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+import useSellerStore from "@/store/seller";
+
+function ReviewFilters({
+    averageRating,
+    totalRatings,
+    totalReviews,
+    setTempRating,
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0503
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0504
+}) {
+    const {
+        setShowBottomsheet,
+        setTitleBottomsheet,
+        setDataBottomsheet,
+        titleBottomsheet
+    } = toast();
+    const { setAppBar, setScreen } = useHeader()
+    const { t } = useLanguage();
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+    const { filter, setFilter, setReviews } = useSellerStore();
+
+    const handleSortSelect = (value) => () => {
+        // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+        setFilter({ sort: value, page: 1 })
+        // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0503
+        // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0504
+        setReviews([])
+        renderSortBottomsheet(value)
+        // LB - 0053, 24. THP 2 - MOD001 - MP - 020 - QC Plan - Web - MuatParts - Profil Seller Sisi Buyer
+        setShowBottomsheet(false)
+    }
+
+    const renderSortBottomsheet = (currentSort) => {
+        setDataBottomsheet(
+            <div className="flex flex-col gap-y-3">
+                <span className="font-bold text-[14px] leading-[15.4px]">
+                    {t("buttonReviews")}
+                </span>
+                <RadioButton
+                    label={t("labelNewest")}
+                    name="newest"
+                    checked={currentSort === "newest"}
+                    onClick={handleSortSelect("newest")}
+                />
+                <RadioButton
+                    label={t("labelOldest")}
+                    name="oldest"
+                    checked={currentSort === "oldest"}
+                    onClick={handleSortSelect("oldest")}
+                />
+                <RadioButton
+                    label={t("labelHighest")}
+                    name="highest"
+                    checked={currentSort === "highest"}
+                    onClick={handleSortSelect("highest")}
+                />
+                <RadioButton
+                    label={t("labelLowest")}
+                    name="lowest"
+                    checked={currentSort === "lowest"}
+                    onClick={handleSortSelect("lowest")}
+                />
+            </div>
+        )
+    }
+
+    const handleOpenBottomsheet = () => {
+        setShowBottomsheet(true)
+        setTitleBottomsheet(t("labelSort"))
+        renderSortBottomsheet(filter.sort)
+    }
+
+    const handleOpenFilter = () => {
+        setTempRating(filter.rating)
+        setAppBar({
+            appBarType: "header_title_secondary",
+            renderAppBar: (
+                <div className="relative flex justify-center items-center w-full h-6">
+                    <button
+                        className="absolute left-0 top-[24px] -translate-y-full"
+                        onClick={() => setScreen("")}
+                    >
+                        <IconComponent
+                            classname={`icon-blue-fill`}
+                            src="/icons/silang.svg"
+                            size="medium"
+                        />
+                    </button>
+                    <span className="font-semibold text-[14px] leading-[16.8px]">
+                        {t("labelFilterInternal")}
+                    </span>
+                </div>
+            )
+        })
+        setScreen('filter')
+    }
+
+    return (
+        <>
+            <div className="flex overflow-hidden flex-col justify-center p-4 w-full bg-white">
+                <div className="flex overflow-hidden flex-col w-full bg-white">
+                    <div className="flex flex-col justify-center px-3 py-4 w-full bg-white rounded-lg border border-solid border-stone-300">
+                        <div className="flex items-center w-full">
+                            <IconComponent
+                                src="/icons/star.svg"
+                                width={22}
+                                height={22}
+                            />
+                            <div className="ml-1 font-bold text-[14px] leading-[15.4px] w-[60px]">
+                                {`${averageRating}/`}
+                                <span className="font-semibold text-[11px] leading-[13.2px] text-neutral-600">
+                                    5{" "}
+                                </span>
+                            </div>
+                            <div className="flex flex-col justify-center my-auto text-[12px] leading-[14.4px]">
+                                <div className="gap-1 self-start font-bold text-black">
+                                    {t("labelReviewsRating")}
+                                </div>
+                                <div className="flex gap-1 items-center mt-2 font-medium text-neutral-700">
+                                    <div className="my-auto">{`${totalRatings} ${t("labelrating")}`}</div>
+                                    <div className="size-0.5 bg-neutral-700 rounded" />
+                                    <div className="my-auto">{`${totalReviews} ${t("buttonreviews")}`}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex gap-1 items-end self-start mt-4 text-sm font-medium leading-none text-black whitespace-nowrap">
+                        <button
+                            className={`flex gap-x-2 items-center px-3 h-[30px] rounded-3xl border border-solid w-fit
+                                ${filter.rating.length > 0 ? "text-primary-700 border-primary-700 bg-primary-50" : "bg-neutral-200 border-neutral-200 text-neutral-900"}
+                            `}
+                            onClick={handleOpenFilter}
+                        >
+                            <div className="font-medium text-[14px] leading-[15.4px]">
+                                {t("labelFilterInternal")}
+                            </div>
+                            <IconComponent
+                                classname={filter.rating.length > 0 ? styles.icon_active : styles.icon_inactive}
+                                src="/icons/filter.svg"
+                                height={14}
+                                width={14}
+                            />
+                        </button>
+                        <button
+                            className={`flex gap-2 items-center px-3 h-[30px] rounded-3xl border border-solid w-fit
+                                ${filter.sort ? "text-primary-700 border-primary-700 bg-primary-50" : "bg-neutral-200 border-neutral-200 text-neutral-900"}
+                            `}
+                            onClick={handleOpenBottomsheet}
+                        >
+                            <div className="font-medium text-[14px] leading-[15.4px]">
+                                {t("labelSort")}
+                            </div>
+                            <IconComponent
+                                classname={filter.sort ? styles.icon_active : styles.icon_inactive}
+                                src="/icons/sorting.svg"
+                                height={14}
+                                width={14}
+                            />
+                        </button>
+                        <button
+                            className={`flex items-center px-3 h-[30px] rounded-3xl border 
+                                border-solid border-neutral-200 w-fit
+                                ${filter.withMedia ? "text-primary-700 border-primary-700 bg-primary-50" : "bg-neutral-200 border-neutral-200 text-neutral-900"}
+                            `}
+                            onClick={() => {
+                                // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0503
+                                // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0504
+                                // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+                                setFilter({ withMedia: !filter.withMedia, page: 1 })
+                                setReviews([])
+                            }}
+                        >
+                            <div className="font-medium text-[14px] leading-[15.4px]">
+                                {t("labelImages")}
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {titleBottomsheet === t("labelSort") ? <Bottomsheet withReset onClickReset={handleSortSelect(null)}/> : null}
+        </>
+    );
+}
+
+export default ReviewFilters;

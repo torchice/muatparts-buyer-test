@@ -1,0 +1,141 @@
+import { useState } from "react";
+import style from "./OrderCard.module.scss";
+import Image from "next/image";
+import Checkbox from "../Checkbox/Checkbox";
+import IconComponent from "../IconComponent/IconComponent";
+import QuantityInput from "../QuantityInput/QuantityInput";
+import ModalComponent from "../Modals/ModalComponent";
+import TextArea from "../TextArea/TextArea";
+import Button from "../Button/Button";
+import { numberFormatMoney } from "@/libs/NumberFormat";
+import { useLanguage } from "@/context/LanguageContext";
+
+const ProductList = ({
+  item,
+  checked,
+  onCheckChange,
+  quantity,
+  onQuantityChange,
+  updateProductNote,
+}) => {
+  const { t } = useLanguage();
+  const [note, setNote] = useState(item.notes);
+  const [tempNote, setTempNote] = useState(item.notes);
+  const [modalNote, setModalNote] = useState(false);
+
+  const handleNoteChange = () => {
+    updateProductNote(tempNote);
+    setNote(tempNote);
+  };
+
+  const renderPrice = () => {
+    const price = item.discount
+      ? item.priceAfterDiscount
+      : item.priceBeforeDiscount;
+
+    return (
+      <div className="text-right">
+        {item.discount > 0 && (
+          <div className="flex gap-2 items-center mb-1">
+            <strike className="text-neutral-600">
+              {numberFormatMoney(item.priceBeforeDiscount)}
+            </strike>
+            <div className="bg-error-400 rounded p-1 font-semibold text-white leading-none">
+              {item.discount}% OFF
+            </div>
+          </div>
+        )}
+        <div className="font-bold">
+          {item.qty} x {numberFormatMoney(price)}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <div className="flex gap-5 items-start py-4">
+        <div className="w-full">
+          <div className="flex gap-5 w-full">
+            <div className="relative w-[56px] h-[56px]">
+              <Image
+                src={item.photo}
+                fill
+                style={{ objectFit: "cover" }}
+                alt={item.productName}
+              />
+            </div>
+            <div className="flex w-full justify-between">
+              <div className="w-[450px] space-y-2 text-xs">
+                <div className="font-bold">{item.productName}</div>
+                <div className="font-medium text-neutral-600">
+                  {item.variant?.variantName}
+                </div>
+                {note && (
+                  <div className="text-xs text-neutral-600 w-[500px] -mb-1 line-clamp-1">
+                    {t("KontrakHargaIndexCatatan")} : {note}
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <div
+                    className={`${style.textButtonPrimary} ${style.active}`}
+                    onClick={() => setModalNote(true)}
+                  >
+                    {note
+                      ? t("HomepageBuyerMuatpartsChangeNotes")
+                      : t("labelTambahCatatan")}
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs space-y-2">{renderPrice()}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ModalComponent
+        hideHeader
+        isOpen={modalNote}
+        setClose={() => {
+          setTempNote(item.notes);
+          setModalNote(false);
+        }}
+        classnameContent={"w-[471px]"}
+      >
+        <div className="pb-8 pt-4 px-6 space-y-4">
+          <div className="font-bold text-center">
+            {note
+              ? t("HomepageBuyerMuatpartsChangeNotes")
+              : t("labelTambahCatatan")}
+          </div>
+          <TextArea
+            value={tempNote}
+            placeholder="Tulis catatan kamu untuk produk ini"
+            maxLength={250}
+            hasCharCount
+            resize="none"
+            status={""}
+            changeEvent={(e) =>
+              !tempNote && e.target.value.startsWith(" ")
+                ? null
+                : setTempNote(e.target.value)
+            }
+            // 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer LB-0145
+            height={145}
+          />
+          <Button
+            Class="mx-auto"
+            onClick={() => {
+              setModalNote(false);
+              handleNoteChange();
+            }}
+          >
+            Simpan Catatan
+          </Button>
+        </div>
+      </ModalComponent>
+    </>
+  );
+};
+
+export default ProductList;

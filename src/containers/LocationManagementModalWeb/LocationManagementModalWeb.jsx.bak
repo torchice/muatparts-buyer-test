@@ -1,0 +1,68 @@
+
+'use client';
+import { mutate } from 'swr';
+import style from './LocationManagementModalWeb.module.scss'
+import { useEffect, useState } from 'react';
+import ModalComponent from '@/components/Modals/ModalComponent';
+import AddAddressContainer from '../AddAddressContainer/AddAddressContainer';
+import ListAddressContainer from '../ListAddressContainer/ListAddressContainer';
+import ProtectComponent from '@/common/ProtectComponent';
+import { userLocationZustan } from '@/store/manageLocation/managementLocationZustand';
+function LocationManagementModalWeb({isOpen,setClose,onSelectLocation,...props}) {
+    const [getModal,setModal]=useState('')
+    const {locations}=userLocationZustan()
+    function handelIsClose() {
+        setModal("")
+        setClose?.()
+    }
+    function onSave() {
+        setModal("")
+        setClose?.()
+    }
+    useEffect(()=>{
+        if(typeof isOpen==='boolean') setModal(isOpen?'show_location':'')
+        if(typeof isOpen==='string') setModal(isOpen)
+        if(!isOpen) setModal('')
+    },[isOpen,onSelectLocation])
+    return (
+        <>
+            <ModalComponent
+                full
+                hideHeader
+                isOpen={getModal === "show_location"}
+                setClose={handelIsClose}
+            >
+                <ListAddressContainer
+                    accessToken={props?.accessToken}
+                    locations={locations}
+                    onChange={() => setModal("add_location")}
+                    onAddAddress={() => setModal("add_location")}
+                    onSave={onSave}
+                    onSelectLocation={onSelectLocation}
+                />
+            </ModalComponent>
+            <ModalComponent
+                classnameContent={
+                "!py-8 !px-6 !max-h-[500px] !overflow-y-hidden !h-full !w-full !max-w-[471px]"
+                }
+                full
+                hideHeader
+                isOpen={getModal === "add_location"}
+                setClose={() => {
+                    setModal("show_location");
+                }}
+            >
+                <AddAddressContainer
+                    onClickSave={() => {
+                        setModal("show_location");
+                        mutate("v1/muatparts/profile/location");
+                    }}
+                    classname={"!overflow-auto"}
+                />
+            </ModalComponent>
+      </>
+    );
+}
+
+export default ProtectComponent(LocationManagementModalWeb)
+  

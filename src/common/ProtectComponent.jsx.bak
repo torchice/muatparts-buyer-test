@@ -1,0 +1,15 @@
+import { authZustand } from '@/store/auth/authZustand'
+import { userZustand } from '@/store/auth/userZustand'
+import React from 'react'
+
+function ProtectComponent(Component) {
+  return props=>{
+    const {accessToken,refreshToken}=authZustand()
+    const user = userZustand()
+    const isLogin = accessToken&&user?.id
+    return <Component {...props} accessToken={accessToken}
+    refreshToken={refreshToken} user={user} isLogin={isLogin}/>
+  }
+}
+
+export default ProtectComponent

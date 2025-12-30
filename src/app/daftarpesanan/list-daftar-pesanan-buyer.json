@@ -1,0 +1,187 @@
+{
+  "Message": { "Code": 200, "Text": "Success" },
+  "Data": {
+    "orders": [
+      {
+        "nomorInvoice": "INV/20240124/MPM/000001",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 12035000,
+        "status": "Menunggu Pembayaran",
+        "statusInfo": {
+          "text": "Lakukan pembayaran sebelum",
+          "date": "20 Sep 2024 13:00 WIB",
+          "bg": "error-50",
+          "textColor": "error-400"
+        },
+        "tanggalJatuhTempo": "2024-09-20T13:00:00",
+        "jumlahProdukLain": 3,
+        "informasiTambahan": "20 Sep 2024 13:00 WIB"
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000002",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "menungguRespon",
+        "statusInfo": {
+          "text": "Dibatalkan otomatis pada",
+          "date": "20 Sep 2024 13:00 WIB",
+          "bg": "error-50",
+          "textColor": "error-400"
+        },
+        "tanggalJatuhTempo": "2024-09-20T13:00:00",
+        "informasiTambahan": "20 Sep 2024 13:00 WIB"
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000003",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "dikemas",
+        "statusInfo": {
+          "text": "Pesanan akan dikirim sebelum",
+          "date": "20 Sep 2024 13:00 WIB",
+          "bg": "primary-50",
+          "textColor": "primary-700"
+        },
+        "jumlahProdukLain": 1,
+        "informasiTambahan": "20 Sep 2024 13:00 WIB"
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000004",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "dikirim",
+        "jumlahProdukLain": 1
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000005",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "tibaDitujuan",
+        "statusInfo": {
+          "text": "Pesanan telah diterima",
+          "bg": "success-50",
+          "textColor": "success-400"
+        },
+        "jumlahProdukLain": 1,
+        "informasiTambahan": "Pesanan telah diterima"
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000006",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "dikomplain",
+        "statusInfo": {
+          "text": "Menunggu Respon Penjual Paling lambat",
+          "date": "20 Sep 2024 13:00 WIB",
+          "bg": "error-50",
+          "textColor": "error-400"
+        },
+        "jumlahProdukLain": 1,
+        "informasiTambahan": "20 Sep 2024 13:00 WIB"
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000007",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "selesai",
+        "jumlahProdukLain": 1
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000008",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "komplainSelesai",
+        "jumlahProdukLain": 1
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000009",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "dibatalkanPenjual",
+        "statusInfo": {
+          "text": "Stok Habis",
+          "bg": "neutral-200",
+          "textColor": "neutral-900"
+        },
+        "jumlahProdukLain": 1,
+        "informasiTambahan": "Stok Habis"
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000010",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "dibatalkanPembeli",
+        "statusInfo": {
+          "text": "Alamat Salah",
+          "bg": "neutral-200",
+          "textColor": "neutral-900"
+        },
+        "jumlahProdukLain": 1,
+        "informasiTambahan": "Alamat Salah"
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000011",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "dibatalkanSistem",
+        "statusInfo": {
+          "text": "Penjual tidak merespon pesanan",
+          "bg": "neutral-200",
+          "textColor": "neutral-900"
+        },
+        "jumlahProdukLain": 1,
+        "informasiTambahan": "Penjual tidak merespon pesanan"
+      },
+      {
+        "nomorInvoice": "INV/20240124/MPM/000012",
+        "tanggalPesan": "2024-01-25T13:00:00",
+        "namaToko": "Priority Tire",
+        "namaProduk": "Kampas Kopling Quester (Disc Clutch) N3100-NA04AD",
+        "jumlah": 20,
+        "totalHarga": 7800000,
+        "status": "pengembalianSelesai",
+        "statusInfo": {
+          "text": "Dana telah dikembalikan ke metode pembayaran yang kamu pakai",
+          "bg": "success-50",
+          "textColor": "neutral-900"
+        },
+        "jumlahProdukLain": 1,
+        "informasiTambahan": "Dana telah dikembalikan ke metode pembayaran yang kamu pakai"
+      }
+    ]
+  },
+  "Type": "GET_ORDERS"
+}

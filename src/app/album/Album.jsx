@@ -1,0 +1,76 @@
+"use client";
+import { viewport } from "@/store/viewport";
+import React, { useEffect, useState } from "react";
+import AlbumResponsive from "./AlbumResponsive";
+import AlbumWeb from "./AlbumWeb";
+import SWRHandler from "@/services/useSWRHook";
+import useAlbumStore from "@/store/album";
+import AlbumWishlist from "@/components/AlbumWishist/AlbumWishlist";
+
+function Album() {
+  const ALBUM_ENDPOINT = "v1/muatparts/albums";
+
+  const [state, setState] = useState();
+  const { useSWRHook, useSWRMutateHook } = SWRHandler();
+
+  const {
+    modalNewAlbum,
+    setModalNewAlbum,
+    fetchAlbum,
+    setFetchAlbum,
+    setDataAlbum,
+    dataAlbum,
+  } = useAlbumStore();
+
+  const {
+    data: resAlbum,
+    mutate: mutateAlbum,
+    isLoading: loadingAlbum,
+  } = useSWRHook(ALBUM_ENDPOINT);
+
+  // useEffect(() => {
+  //   triggerAlbum();
+  // }, []);
+
+  // useEffect(() => {
+  //   if (fetchAlbum) {
+  //     triggerAlbum();
+  //   }
+  // }, [fetchAlbum]);
+
+  useEffect(() => {
+    if (resAlbum) {
+      setDataAlbum(resAlbum?.Data?.albums);
+      setFetchAlbum(false);
+    }
+  }, [resAlbum]);
+
+  const { isMobile } = viewport();
+
+  if (isMobile)
+    return (
+      <AlbumResponsive
+        mutateAlbum={mutateAlbum}
+        albumItems={resAlbum?.Data?.albums ?? []}
+        lastVisited={resAlbum?.Data?.recentlyViewed ?? []}
+        recommendations={resAlbum?.Data?.recommendations ?? []}
+        modalNewAlbum={modalNewAlbum}
+        loadingAlbum={loadingAlbum}
+      />
+    );
+
+  return (
+    <>
+      <AlbumWeb
+        mutateAlbum={mutateAlbum}
+        albumItems={resAlbum?.Data?.albums ?? []}
+        lastVisited={resAlbum?.Data?.recentlyViewed ?? []}
+        recommendations={resAlbum?.Data?.recommendations ?? []}
+        modalNewAlbum={modalNewAlbum}
+        loadingAlbum={loadingAlbum}
+      />
+    </>
+  );
+}
+
+export default Album;

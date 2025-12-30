@@ -1,0 +1,39 @@
+import { create } from "zustand";
+
+export const filterProduct = create((set,get)=>({
+    q:"",
+    groupcategoryID: "",
+    categoryID: "",
+    subcategoryID: "",
+    itemID: "",
+    startPrice: 0,
+    endPrice: 0,
+    cityID: [],
+    brandProductID: [],
+    salesType: [],
+    conditionID: [],
+    vehicleID: "",
+    brandID: "",
+    year: "",
+    modelID: "",
+    tipeID:"",
+    garageID: "",
+    radius: 0,
+    latitude: "",
+    longitude: "",
+    shippingType: "",
+    lastOnline: "",
+    promo: "",
+    rating: 0,
+    alias:false,
+    type:"",
+    limit:10,
+    page:1,
+    distance:[],
+    setFilterProduct: (field,val)=>{
+        let value = field==='alias'?!!(val):val
+        set({[field]:value})
+    },
+    setFilter:(val)=>set({...get(0),...val}),
+    setAllFilter:(val)=>set(val)
+}))

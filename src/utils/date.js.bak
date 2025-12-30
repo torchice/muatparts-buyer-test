@@ -1,0 +1,19 @@
+export const formatDate = date => {
+	if (!date) return;
+	const formatter = new Intl.DateTimeFormat("id-ID", {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+	return formatter.format(new Date(date));
+};
+
+export const formatDateToDatePicker = date => {
+	const dt = new Date(date);
+	const formatted = `${dt.toISOString().split("T")[0]} ${
+		dt.toISOString().split("T")[1].split(".")[0]
+	}`;
+	return formatted;
+};

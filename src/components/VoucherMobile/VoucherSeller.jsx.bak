@@ -1,0 +1,187 @@
+import { useState, useEffect } from "react";
+import VoucherCardMobile from "@/components/VoucherMobile/VoucherCardMobile";
+import SWRHandler from "@/services/useSWRHook";
+import toast from "@/store/toast";
+import Bottomsheet from "@/components/Bottomsheet/Bottomsheet";
+import voucherServices from "@/services/voucherServices";
+import Toast from "@/components/Toast/Toast";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import Input from "@/components/Input/Input";
+
+const VoucherSeller = ({seller_id=null}) => {
+
+    const [vouchers, setVouchers] = useState([]);
+    const [search, setSearch] = useState("");
+    const [inputValue, setInputValue] = useState("");
+
+    const { useSWRHook } = new SWRHandler();
+
+    const { showBottomsheet, setShowBottomsheet, setTitleBottomsheet, setShowToast, setDataToast } =
+    toast();
+
+    // const SELLER_VOUCHER =
+    //     seller_id ? process.env.NEXT_PUBLIC_GLOBAL_API + 
+    //     `muatparts/voucher-buyer/${seller_id}?page=1&page_size=5${showBottomsheet ? `&is_limited=false` : ``}` : null
+
+    // 25.03 LB - 0300, 0336
+
+    // LBM, 25.03 LB 0549
+
+    // 24.THP 2-MOD001-MP-024 QC PLAN-WEB-MUATPARTS VOUCHER BUYER LB 0022
+
+    const SELLER_VOUCHER =
+    seller_id ? 
+    `v1/muatparts/voucher-buyer/${seller_id}?page=1&page_size=5&is_limited=false&list_type=seller&status=Aktif${search && search.length > 0 ? `&q=${search}` : ``}` : null
+
+    const { 
+        data,
+        error,
+        isLoading,
+    } = useSWRHook(SELLER_VOUCHER);
+
+    const handleClaimVoucher = async (kode, id) => {
+		try{
+			const claim = await voucherServices.claimVoucher(kode);
+
+            setShowToast(true);
+            setDataToast({
+                type: claim?.Code === 200 ? "success" : "error",
+                message: claim?.Code === 200 ? "Voucher berhasil diklaim" : claim?.Text,
+            });
+
+            if(claim.Code === 200){
+                setVouchers((prevState) => prevState.map((item) => 
+                    item.uuid === id 
+                        ? {...item, is_used: 1}
+                        : item
+                ));
+            }
+		}
+		catch(e)
+		{
+			console.log("error claim voucher", e);
+		}
+	}
+
+    const handleOpenBottomsheet = () => {
+        try
+        {
+            setShowBottomsheet(true);
+            setTitleBottomsheet("Pilih Voucher");
+        }
+        catch(e)
+        {
+            console.log("error", e);
+        }
+    }
+
+    useEffect(() => {
+
+        // 24.THP 2-MOD001-MP-024 QC PLAN-WEB-MUATPARTS VOUCHER BUYER LB 0020
+
+        if(data?.Data)
+        {
+            setVouchers(data?.Data?.map(item => ({
+                discountMax: item.discount_max,
+                discountValue: item.discount_value,
+                startDate: item.start_date,
+                expiredAt: item.expired_at,
+                uuid: item.uuid,
+                usageQuota: item.usage_quota,
+                kode: item.kode,
+                is_used: item.used_status == "available" ? 0 : 1,
+                usageCount: item.usageCount,
+                hoursLeft: item.hoursLeft,
+                daysLeft: item.daysLeft,
+                transactionMin: item.transaction_min,
+                discountType: item.discount_type
+            })));
+        }
+
+    }, [data]);
+
+    const handleSearch = (e) => {
+        if(e.key === "Enter" || e.keyCode === 13)
+        {
+            setSearch(e.target.value);
+        }
+    }
+
+    const handleClearSearch = () => {
+        setSearch("");
+        setInputValue("");
+    }
+
+    return (
+        <>  
+            <Bottomsheet>
+                {/* 24.THP 2-MOD001-MP-024 QC PLAN-WEB-MUATPARTS VOUCHER BUYER LB 0036 */}
+                <Toast />
+                <div className="flex flex-col gap-4">
+                    <Input
+                        placeholder="Cari Voucher"
+                        icon={{
+                            left: (
+                                <IconComponent src={"/icons/search.svg"} />
+                            ),
+                            right: search ? (
+                                <IconComponent
+                                    src={"/icons/silang.svg"}
+                                    onclick={handleClearSearch}
+                                />
+                            ) : null,
+                        }}
+                        value={inputValue}
+                        changeEvent={(e) => {setInputValue(e.target.value)}}
+                        onKeyPress={(e) => {handleSearch(e)}}
+                    />
+                    {/* 24.THP 2-MOD001-MP-024 QC PLAN-WEB-MUATPARTS VOUCHER BUYER LB 0019, LB 0021 */}
+
+                    <div className="overflow-x-hidden flex flex-col gap-4 overflow-y-auto max-h-[60vh] no-scrollbar">
+                        {
+                            vouchers?.map((item, index) => (
+                                <VoucherCardMobile 
+                                    type="voucher-list-seller"
+                                    voucher={item} key={index}
+                                    handleClick={() => {handleClaimVoucher(item.kode, item.uuid)}}
+                                />
+                            ))
+                        }
+                    </div>
+                </div>
+            </Bottomsheet>
+            <div className="py-5 px-4 flex flex-col gap-4 bg-neutral-50">
+                <div className="flex justify-between">
+                    <label className="semi-base text-neutral-900">Voucher Penjual</label>
+                    <label 
+                        onClick={handleOpenBottomsheet}
+                        className="semi-sm text-primary-700 cursor-pointer"
+                    >
+                        Lihat Semua
+                    </label>
+                </div>
+                <div className="flex gap-3 overflow-y-scroll no-scrollbar">
+                    {
+                        vouchers.map((item, index) => {
+                            if(index < 6)
+                            {
+                                return (
+                                    <div className="min-w-fit">
+                                        <VoucherCardMobile
+                                            key={index}
+                                            voucher={item}
+                                            type="voucher-list-seller"
+                                            handleClick={() => {handleClaimVoucher(item.kode, item.uuid, item.is_used)}}
+                                        />
+                                    </div>
+                                );
+                            }
+                        })
+                    }
+                </div>
+            </div>
+        </>
+    )
+}
+
+export default VoucherSeller;

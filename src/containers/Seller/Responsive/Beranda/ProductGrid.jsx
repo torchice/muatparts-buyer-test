@@ -1,0 +1,49 @@
+import { Fragment } from "react";
+import ProductComponent from "@/components/ProductComponent/ProductComponent";
+// LBM - Multibahasa Optimization
+import { useLanguage } from "@/context/LanguageContext";
+
+export default function ProductGrid({
+  title,
+  products,
+  sellerProfile,
+}) {
+  const {t} = useLanguage()
+  if (!products || products.length === 0) {
+    return null;
+  }
+{/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0529 */}
+  return (
+    <div className="flex flex-col w-full gap-y-4">
+      <div className="text-base font-semibold leading-none text-black">
+        {title}
+      </div>
+      <div className="flex overflow-x-auto scrollbar-none w-[calc(100vw_-_16px)]">
+        <div className="flex gap-2 items-stretch w-full">
+          {products.map((product, key) => (
+            <Fragment key={key}>
+              {/* LBM - OLIVER - IMP PRODUCT COMPONENT CAKRA - MP - 020 */}
+              <ProductComponent
+                ID={product.id}
+                Photo={product.imageSrc}
+                // {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0529 */}
+                SalesType={product.isGrosir ? t("LabelproductCardGrosir") : ""}
+                Stock={product.stock}
+                Grade={product.grade}
+                Name={product.title}
+                PriceBeforeDiscount={product.originalPrice}
+                PriceAfterDiscount={product.discountedPrice}
+                Discount={product.discount}
+                Store={sellerProfile?.name}
+                City={sellerProfile?.location}
+                Rating={product.rating}
+                SoldCount={product.sales}
+                Wishlist={product.isWishlisted}
+              />
+            </Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

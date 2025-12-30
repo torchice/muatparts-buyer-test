@@ -1,0 +1,390 @@
+"use client";
+
+import Button from "@/components/Button/Button";
+import ModalComponent from "@/components/Modals/ModalComponent";
+import PaymentOption from "@/components/PaymentOption/PaymentOption";
+import { numberFormatMoney } from "@/libs/NumberFormat";
+import { ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import DropshipForm from "./DropshipForm";
+import { useCheckoutStore } from "@/store/checkout";
+import { getVoucherValue } from "@/libs/voucher";
+import { useLanguage } from "@/context/LanguageContext";
+import { formatOrderData } from "@/libs/checkout";
+import MuatpartsVoucher from "../MuatpartsVoucher/MuatpartsVoucher";
+import UsedVoucherList, {
+  calculateVoucherValue,
+} from "../MuatpartsVoucher/UsedVoucherList";
+import useVoucherMuatpartsStore from "@/store/useVoucherMuatpartsStore";
+import { extractVoucherIDs } from "@/utils/voucher";
+
+function RingkasanPembayaran({
+  orders: initialOrders,
+  applicationFee,
+  paymentData,
+  onClickPay,
+}) {
+  const { t } = useLanguage();
+  const [orders, setOrders] = useState(initialOrders);
+
+  useEffect(() => {
+    if (initialOrders) setOrders(initialOrders);
+  }, [initialOrders]);
+
+  const { setCheckPay } = useCheckoutStore();
+  const { submittedVouchers } = useVoucherMuatpartsStore();
+
+  const [isOpenPayment, setIsOpenPayment] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const [isDropship, setIsDropship] = useState(false);
+  const [dropshipValues, setDropshipValues] = useState({
+    name: "",
+    phone: "",
+  });
+  const [dropshipErrors, setDropshipErrors] = useState({
+    name: "",
+    phone: "",
+  });
+
+  const totalPrice = orders.reduce((acc, order) => acc + order.totalAmount, 0);
+
+  useEffect(() => {
+    if (orders.length) {
+      setLoading(false);
+    }
+  }, [orders]);
+
+  const checkDropshipValues = (e) => {
+    setDropshipValues(e);
+  };
+
+  const checkBeforePay = () => {
+    const hasNoShippingCost = orders.some(
+      (order) =>
+        order.selectedShippingCost &&
+        Object.keys(order.selectedShippingCost).length === 0
+    );
+
+    if (isDropship) {
+      const errors = {
+        name: "",
+        phone: "",
+      };
+
+      // Validate dropship fields
+      if (!dropshipValues.name || dropshipValues.name.trim() === "") {
+        errors.name = "Nama Pengirim wajib diisi";
+      }
+
+      if (!dropshipValues.phone || dropshipValues.phone.trim() === "") {
+        errors.phone = "Nomor Telepon wajib diisi";
+      }
+
+      // Set the errors
+      setDropshipErrors(errors);
+
+      // Check if there are any errors
+      if (errors.name || errors.phone) {
+        setCheckPay(true);
+        return;
+      }
+    }
+
+    if (hasNoShippingCost) {
+      setCheckPay(true);
+    } else {
+      onClickPay(fromPayment);
+      setCheckPay(false);
+    }
+  };
+
+  const VoucherDisplay = ({
+    dataUsedVoucher,
+    dataUsedTransaction,
+    subtotal,
+  }) => {
+    // Create an array with both voucher types
+    const vouchers = [dataUsedVoucher, dataUsedTransaction].filter(Boolean);
+
+    return (
+      <>
+        {vouchers.map((voucher) => (
+          <div
+            key={voucher.uuid}
+            className="flex justify-between text-xs font-medium"
+          >
+            <div className="w-[148px] text-neutral-600">
+              <span>{t("AppMuatpartsDashboardSellerVoucher")} : </span>
+              <span className="inline-block max-w-[80px] truncate align-bottom">
+                {voucher.kode}
+              </span>
+            </div>
+            <div className="text-right text-error-400">
+              -{numberFormatMoney(getVoucherValue(voucher, subtotal))}
+            </div>
+          </div>
+        ))}
+      </>
+    );
+  };
+
+  // 25. 11 - QC Plan - Web - Ronda Live Mei - LB - 0161
+  const summary = formatOrderData(orders, {
+    adminFee: +selectedPayment?.fee,
+    appFee: applicationFee,
+    voucherPurchase: calculateVoucherValue(
+      submittedVouchers.purchase,
+      totalPrice
+    ),
+    voucherShipping: calculateVoucherValue(
+      submittedVouchers.shipping,
+      totalPrice
+    ),
+  });
+
+  const mappedVoucherIDs = extractVoucherIDs(submittedVouchers);
+
+  const fromPayment = {
+    selectedPayment,
+    totalPayment: summary.totalPayment,
+    orders,
+    totalSelectedItems: summary.totalProduct,
+    totalPrice: summary.totalPrice,
+    totalShippingCost: summary.totalShippingCost,
+    isDropship,
+    dropshipValues,
+    mappedVoucherIDs,
+  };
+
+  return (
+    <>
+      <div className="rounded-xl shadow-muatmuat px-5 py-6 space-y-6">
+        {loading ? (
+          <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+        ) : (
+          <div className="font-bold">Ringkasan Pembayaran</div>
+        )}
+        {loading ? (
+          <div className="h-10 bg-gray-200 rounded w-full animate-pulse"></div>
+        ) : (
+          <MuatpartsVoucher />
+        )}
+        {loading ? (
+          <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+        ) : (
+          <div className="font-semibold text-sm">
+            {t("labelRingkasanPesanan")}
+          </div>
+        )}
+
+        <div className="flex justify-between text-xs font-medium">
+          {loading ? (
+            <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+          ) : (
+            <div className="w-[148px] text-neutral-600">
+              {t("labelTotalHarga")} ({summary.totalProduct}{" "}
+              {t("BuyerIndexProduk")})
+            </div>
+          )}
+
+          {loading ? (
+            <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+          ) : (
+            <div className="text-right">
+              {numberFormatMoney(summary.totalPrice)}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-between text-xs font-medium">
+          {loading ? (
+            <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+          ) : (
+            <div className="w-[148px] text-neutral-600">
+              Total Biaya Pengiriman
+            </div>
+          )}
+          {loading ? (
+            <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+          ) : (
+            <div className="text-right">
+              {numberFormatMoney(summary.totalShippingCost)}
+            </div>
+          )}
+        </div>
+
+        {orders.some((order) => order.selectedShippingCost?.isUseInsurance) && (
+          <diviv className="flex justify-between text-xs font-medium">
+            <div className="w-[148px] text-neutral-600">
+              Total {t("AppKelolaProdukMuatpartsTambahAsuransiPengiriman")}
+            </div>
+            <div className="text-right">
+              {numberFormatMoney(summary.totalInsuranceCost)}
+            </div>
+          </diviv>
+        )}
+
+        {/* {orders?.map((i) => (
+          <VoucherDisplay
+            key={i.cartID}
+            dataUsedTransaction={i.usedVouchers?.dataUsedTransaction}
+            dataUsedVoucher={
+              i.selectedShippingCost ? i.usedVouchers?.dataUsedVoucher : null
+            }
+            subtotal={i.totalAmount}
+          />
+        ))} */}
+
+        {!loading && summary.productVoucher.map(
+          (item, index) =>
+            item.name && (
+              <div
+                key={index}
+                className="flex justify-between text-xs font-medium"
+              >
+                <div className="w-[148px] text-neutral-600">
+                  <span>{t("AppMuatpartsDashboardSellerVoucher")} : </span>
+                  <span className="inline-block max-w-[80px] truncate align-bottom">
+                    {item.name}
+                  </span>
+                </div>
+                <div className="text-right text-error-400">
+                  -{numberFormatMoney(item.value)}
+                </div>
+              </div>
+            )
+        )}
+        {!loading && summary.shippingVoucher.map(
+          (item, index) =>
+            item.name && (
+              <div
+                key={index}
+                className="flex justify-between text-xs font-medium"
+              >
+                <div className="w-[148px] text-neutral-600">
+                  <span>{t("AppMuatpartsDashboardSellerVoucher")} : </span>
+                  <span className="inline-block max-w-[80px] truncate align-bottom">
+                    {item.name}
+                  </span>
+                </div>
+                <div className="text-right text-error-400">
+                  -{numberFormatMoney(item.appliedValue)}
+                </div>
+              </div>
+            )
+        )}
+
+        {!loading && (
+          <UsedVoucherList
+            voucherData={submittedVouchers}
+            purchaseAmount={totalPrice}
+            shippingCostAmount={summary.totalShippingCost}
+          />
+        )}
+
+        {!loading && (
+          <>
+            <div className="border-[0.5px] border-neutral-400"></div>
+            <div className="font-semibold text-sm">Biaya Lainnya</div>
+            <div className="flex justify-between text-xs font-medium">
+              <div className="w-[148px] text-neutral-600">Biaya Aplikasi</div>
+              {loading ? (
+                <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+              ) : (
+                numberFormatMoney(summary.appFee)
+              )}
+            </div>
+            <div className="flex justify-between text-xs font-medium">
+              <div className="w-[148px] text-neutral-600">
+                Biaya Administrasi
+              </div>
+              {loading ? (
+                <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+              ) : selectedPayment ? (
+                numberFormatMoney(summary.adminFee)
+              ) : (
+                "-"
+              )}
+            </div>
+          </>
+        )}
+        <div className="border-[0.5px] border-neutral-400"></div>
+        <div className="flex justify-between font-bold">
+          {loading ? (
+            <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+          ) : (
+            <div>{t("SubscriptionTotal")}</div>
+          )}
+
+          {loading ? (
+            <div className="h-4 bg-gray-200 rounded w-28 animate-pulse"></div>
+          ) : (
+            numberFormatMoney(summary.totalPayment)
+          )}
+        </div>
+        <div className="border-[0.5px] border-neutral-400"></div>
+
+        <DropshipForm
+          onUpdateValues={checkDropshipValues}
+          dropshipValues={dropshipValues}
+          errorsValues={dropshipErrors}
+          isDropship={isDropship}
+          setIsDropship={setIsDropship}
+          loading={loading}
+        />
+
+        {selectedPayment && (
+          <button
+            className="w-full border flex gap-2 p-3 items-center rounded-md border-neutral-400"
+            onClick={() => setIsOpenPayment(true)}
+          >
+            <img
+              loading="lazy"
+              src={selectedPayment.icon}
+              alt={`${selectedPayment.name} icon`}
+              className="object-contain shrink-0 w-8 h-8"
+            />
+            <div className="flex-1 text-left text-xs font-medium line-clamp-1">
+              {selectedPayment.name}
+            </div>
+            <ChevronRight size={16} />
+          </button>
+        )}
+
+        {selectedPayment ? (
+          <Button Class="!max-w-full !w-full" onClick={() => checkBeforePay()}>
+            {t("HomeLabelButtonPay")}
+          </Button>
+        ) : loading ? (
+          <div className="h-9 bg-gray-200 rounded w-full animate-pulse"></div>
+        ) : (
+          <Button
+            Class="!max-w-full !w-full"
+            onClick={() => setIsOpenPayment(true)}
+          >
+            Pilih Opsi Pembayaran
+          </Button>
+        )}
+      </div>
+
+      <ModalComponent
+        isOpen={isOpenPayment}
+        setClose={() => setIsOpenPayment(false)}
+        hideHeader
+        classnameContent={"!w-[472px] !h-[412px]"}
+      >
+        <PaymentOption
+          paymentData={paymentData}
+          onOptionSelect={(val) => {
+            setSelectedPayment(val);
+            setIsOpenPayment(false);
+          }}
+        />
+      </ModalComponent>
+    </>
+  );
+}
+
+export default RingkasanPembayaran;

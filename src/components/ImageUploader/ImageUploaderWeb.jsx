@@ -1,0 +1,340 @@
+"use client";
+
+import { useRef, useState } from "react";
+import Image from "next/image";
+
+import styles from "./ImageUploader.module.scss";
+import repeatDanger from "./assets/repeatDanger.svg";
+import uploadImage from "./assets/uploadImage.svg";
+import closeImage from "./assets/closeGrey.svg";
+import CropperImage from "../Cropper/Cropper";
+import IconComponent from "../IconComponent/IconComponent";
+import ImageComponent from "../ImageComponent/ImageComponent";
+import toast from "@/store/toast";
+
+export default function ImageUploaderWeb({
+  className, // CLASSNAME KOMPONEN IMAGE UPLOADER, GANTI UKURAN KOTAKNYA PAKEK INI SAJA
+  getImage, //get image
+  isNull = false, //image status
+  isMain = false, //main image status
+  uploadText = "Unggah", //upload image text
+  errorText = "Ulangi", //error upload image text
+  maxSize = 10, // UKURAN MAKSIMAL FILE DALAM MB
+  isCircle = false, // BOOLEAN UNTUK MEMUNCULKAN LINGKARAN DI CROPPER
+  onUpload = () => {}, //function that return image of uploaded image
+  onError = () => {}, //function that return error when uploading image,
+  value = null,
+  isBig = true, // boolean to show text/title below the icon in the middle
+  cropperTitle, // TITLE DI CROPPER
+  onFinishCrop,
+  isLoading, //loading status
+  acceptedFormats = [".jpg", ".jpeg", ".png"], // format of image that can be uploaded
+}) {
+  const imageRef = useRef(null);
+  const [image, setImage] = useState(null); //set image source for cropper
+  const [isOpen, setIsOpen] = useState(false); //open cropper modal
+  const base64Image = value;
+  const [imageFiles, setImageFiles] = useState(null);
+  const [error, setError] = useState(false)
+  const { setShowToast, setDataToast } = toast();
+
+  // const getFile = (e) => {
+  //   let files;
+  //   let file;
+  //   if (e.dataTransfer) {
+  //     files = e.dataTransfer.files;
+  //     setImageFiles(files[0]);
+  //   } else if (e.target) {
+  //     files = e.target.files;
+  //     setImageFiles(files[0]);
+  //   }
+  //   file = files[0]
+  //   console.log("file",file)
+  //   if (file.size > maxSize * 1024 * 1024) {
+  //     setError({
+  //       status: true,
+  //       message: `Ukuran file melebihi ${maxSize}MB`,
+  //     })
+  //     imageRef.current.value = null;
+  //     return;
+  //   }
+
+  //   const acceptedMimeTypes = acceptedFormats.map(format => {
+  //     switch(format.toLowerCase()) {
+  //       case '.jpg':
+  //       case '.jpeg':
+  //         return 'image/jpeg';
+  //       case '.png':
+  //         return 'image/png';
+  //       // Add more cases as needed
+  //       default:
+  //         return format;
+  //     }
+  //   });
+
+  //   // Check if file type is accepted
+  //   if (!acceptedMimeTypes.includes(file.type)) {
+  //     setError({
+  //       status: true,
+  //       message: `Format file tidak sesuai ketentuan`,
+  //     })
+  //     imageRef.current.value = null;
+  //     return;
+  //   }
+
+  //   const reader = new FileReader();
+  //   reader.onloadend = () => {
+  //     console.log("res",reader.result)
+  //     setImage(reader.result);
+  //   };
+  //   if (reader && e) {
+  //     if (files.length > 0) {
+  //       reader.readAsDataURL(file);
+  //       setIsOpen(true);
+  //       setError(defaultError)
+  //     }
+  //   }
+  // };
+
+  const getFile = (e) => {
+    let files;
+    let file;
+    
+    if (e.dataTransfer) {
+      files = e.dataTransfer.files;
+      setImageFiles(files[0]);
+    } else if (e.target) {
+      files = e.target.files;
+      setImageFiles(files[0]);
+    }
+    file = files[0];
+  
+    if (!file) {
+      return;
+    }
+  
+    // Check file size
+    if (file.size > maxSize * 1024 * 1024) {
+      // setError({
+      //   status: true,
+      //   message: `Ukuran file melebihi ${maxSize}MB`,
+      // });
+      setShowToast(true);
+      setDataToast({
+        type: "error",
+        message: `Ukuran file maksimal ${maxSize}MB`,
+      });
+      setError(true)
+      imageRef.current.value = null;
+      return;
+    }
+  
+    const acceptedMimeTypes = acceptedFormats.map(format => {
+      switch(format.toLowerCase()) {
+        case '.jpg':
+        case '.jpeg':
+          return 'image/jpeg';
+        case '.png':
+          return 'image/png';
+        default:
+          return format;
+      }
+    });
+  
+    // Check if file type is accepted
+    if (!acceptedMimeTypes.includes(file.type)) {
+      // setError({
+      //   status: true,
+      //   message: `Format file tidak sesuai ketentuan`,
+      // });
+      setShowToast(true);
+      setDataToast({
+        type: "error",
+        message: `Format file tidak sesuai ketentuan`,
+      });
+      setError(true)
+      imageRef.current.value = null;
+      return;
+    }
+  
+    const magicNumbers = {
+      "image/jpeg": [0xFF, 0xD8, 0xFF],
+      "image/png": [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+      "image/gif": [0x47, 0x49, 0x46, 0x38],
+      "image/webp": [0x52, 0x49, 0x46, 0x46],
+    };
+  
+    // Create a FileReader for checking magic numbers
+    const headerReader = new FileReader();
+    headerReader.onloadend = () => {
+      if (headerReader.result) {
+        const headerArray = new Uint8Array(headerReader.result);
+        const expectedMagicNumbers = magicNumbers[file.type];
+        if (!expectedMagicNumbers) {
+          // setError({
+          //   status: true,
+          //   message: `Gagal mengunggah gambar`,
+          // });
+          setShowToast(true);
+          setDataToast({
+            type: "error",
+            message: `Gagal mengunggah gambar`,
+          });
+          setError(true)
+          imageRef.current.value = null;
+          return;
+        }
+  
+        let matches = true;
+        for (let i = 0; i < expectedMagicNumbers.length; i++) {
+          if (headerArray[i] !== expectedMagicNumbers[i]) {
+            matches = false;
+            break;
+          }
+        }
+  
+        if (!matches) {
+          // setError({
+          //   status: true,
+          //   message: `Gagal mengunggah gambar`,
+          // });
+          setShowToast(true);
+          setDataToast({
+            type: "error",
+            message: `Gagal mengunggah gambar`,
+          });
+          setError(true)
+          imageRef.current.value = null;
+          return;
+        }
+  
+        // If magic numbers match, proceed with reading the full file
+        const fullReader = new FileReader();
+        fullReader.onloadend = () => {
+          setImage(fullReader.result);
+          setIsOpen(true);
+          setError(false)
+        };
+        fullReader.readAsDataURL(file);
+      }
+    };
+  
+    // Read the first few bytes for magic number checking
+    const blob = file.slice(0, 8); // Read first 8 bytes which covers all our magic numbers
+    headerReader.readAsArrayBuffer(blob);
+  };
+
+  const getCroppedData = (value) => {
+    onFinishCrop(imageFiles);
+    if (value) {
+      getImage(value);
+      onUpload(value);
+      // setError(defaultError)
+      imageRef.current.value = null;
+    }
+  };
+
+  const clearInput = (value) => {
+    if (value) {
+      imageRef.current.value = null;
+      setImage(null);
+    }
+  };
+
+  const removeImage = (e) => {
+    e.stopPropagation();
+    imageRef.current.value = null;
+    setImage(null);
+    getImage(null);
+  };
+
+  return (
+    <>
+      <div
+        className={`${
+          error ? styles.ImageUploaderError : styles.ImageUploader
+        } ${!error && image ? styles.borderImage : styles.borderDashed} ${
+          error && styles.ImageUploaderNull
+        } relative flex items-end group hover:!border-primary-700 size-[72px] ${className}`}
+        style={
+          !error && base64Image
+            ? { backgroundImage: `url(${base64Image})` }
+            : { backgroundImage: `none` }
+        }
+        onClick={() => {
+          if (!isLoading) {
+            imageRef.current.click()
+          }
+        }}
+      >
+        <input
+          accept={[".jpg", ".jpeg", ".png"].join(",")}
+          type="file"
+          onChange={getFile}
+          ref={imageRef}
+          className="hidden"
+        />
+        {isLoading ? (
+          <div>
+            <ImageComponent
+              className={styles.rotate_image}
+              src="/img/loader.png"
+              alt="loader"
+              width={20}
+              height={20}
+            />
+          </div>
+        ) : (
+          <>
+          {!error && !base64Image && (
+            <>
+              <IconComponent size="small" src={uploadImage} />
+              {isBig ? (
+                <span className="text-neutral-900 font-semibold text-[12px] leading-[14.4px] group-hover:text-primary-700">
+                  {uploadText}
+                </span>
+              ) : null}
+            </>
+          )}
+          {error && (
+            <>
+              <IconComponent size="small" src={repeatDanger} />
+              {isBig ? (
+                <span className="text-[#EE4343] group-hover:text-primary-700">
+                  {errorText}
+                </span>
+              ) : null}
+            </>
+          )}
+          {base64Image && !error && (
+            <button
+              className="absolute bg-[#FFFFFF] w-[16px] h-[16px] flex justify-center items-center rounded-[24px] top-[4px] right-[4px]"
+              onClick={removeImage}
+            >
+              <Image src={closeImage} width={16} height={16} alt="close image" />
+            </button>
+          )}
+          {isBig && isMain && base64Image && !error && (
+            <div className="bg-success-50 text-success-400 text-[12px] px-2 font-semibold flex items-center justify-center p-[7px] rounded-md h-[24px] absolute bottom-[8px] left-[8px]">
+              Utama
+            </div>
+          )}
+        </>
+      )}
+      </div>
+      {isOpen ? (
+        <CropperImage
+          imageSource={image}
+          isOpen={isOpen}
+          setIsOpen={setIsOpen}
+          result={getCroppedData}
+          onClose={clearInput}
+          required={true}
+          isCircle={isCircle}
+          fileType={imageFiles?.type}
+          title={cropperTitle}
+        />
+      ) : null}
+    </>
+  );
+}

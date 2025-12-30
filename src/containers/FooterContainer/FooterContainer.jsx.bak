@@ -1,0 +1,280 @@
+
+import React from "react";
+import { MapPin, Phone, Mail } from "lucide-react";
+import Image from "next/image";
+import { authZustand } from "@/store/auth/authZustand";
+import ImageComponent from "@/components/ImageComponent/ImageComponent";
+import { useLanguage } from "@/context/LanguageContext";
+
+const MenuSection = ({ title, items,obj = '' }) => (
+  <div className="flex flex-col gap-4">
+    <h3 className="text-sm font-bold text-white">{title}</h3>
+    <div className="border border-neutral-50/10"></div>
+    <div
+      className={`flex ${
+        obj != '' ? "flex-row gap-4" : "flex-col gap-2"
+      }`}
+    >
+      {obj != ''
+        ? items.map((item, index) => (
+            <ImageComponent
+              key={index}
+              src={`/img/${item}.png`}
+              alt={item}
+              className="h-6 w-auto object-contain"
+              width={24}
+              height={24}
+            />
+          ))
+        : items.map((item, index) => (
+            <a
+              key={index}
+              href={item.url}
+              className="font-medium text-sm text-white/90 hover:text-white transition-colors"
+            >
+              {item.label}
+            </a>
+          ))}
+    </div>
+  </div>
+);
+
+const SocialIcon = ({ href, name }) => (
+  <a
+    href={href}
+    className="bg-primary-700 rounded-full hover:bg-primary-900 transition-colors"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <Image
+      src={process.env.NEXT_PUBLIC_ASSET_REVERSE + `/img/footer-${name}.png`}
+      width={32}
+      height={32}
+      alt={name}
+    />
+  </a>
+);
+
+const ContactInfo = ({ icon: Icon, text }) => (
+  <div className="flex items-center gap-3 text-white">
+    <div>
+      <Icon className="!w-5 !h-5" />
+    </div>
+    <div className="text-xs">{text}</div>
+  </div>
+);
+
+const FooterContainer = () => {
+  const { accessToken } = authZustand();
+  const { t } = useLanguage();
+    
+  const menuSectionA =  [
+    {
+      title: t("footertitleTentangMuatpart"),
+      arr: [
+        {
+          label: t("footerContentTentang"),
+          url: process.env.NEXT_PUBLIC_INTERNAL_WEB + "tentang-kami",
+        },
+        // Improvement Section Footer Hide Menu
+        { label: t("footertitleTentangMuatpart"), url: process.env.NEXT_PUBLIC_FAQ_WEB + "list-content/Vkc1d1VsQlJQVDA9/Vkc1d1RsQlJQVDA9/VkZaU2FrMUJQVDA9"},
+        {
+          label: t("footerSyaratKententuan"),
+          url:
+            process.env.NEXT_PUBLIC_FAQ_WEB +
+            "list-content/VkZkd1FsQlJQVDA9/VkZkd1RsQlJQVDA9/Vkd0U1RsQlJQVDA9",
+        },
+        {
+          label: t("footerKebijakanPrivasi"),
+          url:
+            process.env.NEXT_PUBLIC_INTERNAL_WEB +
+            "tentang-kami/kebijakanprivasi",
+        },
+        { label: t("footerBlog"), url: "https://muatmuat.com/blog" },
+      ],
+    },
+    {
+      title:t("footertitleProdukMuatmuat"),
+      arr: [
+        {
+          label: t("footerBigFleets"),
+          url: accessToken
+            ? process.env.NEXT_PUBLIC_INTERNAL_WEB + "traffics/redirect_bigfleets"
+            : process.env.NEXT_PUBLIC_INTERNAL_WEB + `register/email?from=mpbuyer&redirect=${window.location.href}`,
+        },
+        {
+          label: t("footerTransportMarket"),
+          url: accessToken
+            ? process.env.NEXT_PUBLIC_INTERNAL_WEB +
+              "traffics/redirect_transport_market"
+            : process.env.NEXT_PUBLIC_INTERNAL_WEB + `register/email?from=mpbuyer&redirect=${window.location.href}`,
+        },
+        {
+          label: t("footerIklan"),
+          url: accessToken
+            ? process.env.NEXT_PUBLIC_INTERNAL_WEB +
+              "traffics/redirect_advertisement"
+            : process.env.NEXT_PUBLIC_INTERNAL_WEB + `register/email?from=mpbuyer&redirect=${window.location.href}`,
+        },
+        { label: t("footerLainnya"), url: "lainnya" },
+      ],
+    }
+  ]
+  const menuSectionB = [
+    {
+      title: t("footertitleLayananmuatpart"),
+      arr:  [
+        // { label: t("footerMembership"), url: "membership" },
+        // { label: t("footerMerchant"), url: "daftar-merchant" },
+        { label: t("footerProduct"), url: "products" },
+        // { label: t("footerIklanMuatpart"), url: "iklan-muatparts" },
+      ],
+    },
+    {
+      title: t("footertitleBantuandukungan"),
+      arr: [
+        { label: t("footerPusatBantuanBuyer"), url: process.env.NEXT_PUBLIC_FAQ_WEB + "list-content/Vkc1d1VsQlJQVDA9" },
+        { label: t("footerPusatBantuanMerchant"), url: process.env.NEXT_PUBLIC_FAQ_WEB+"list-content/Vkc1d1VsQlJQVDA9" },
+        // { label: t("footerPengaturanCookies"), url: "pengaturan-cookies" },
+      ]
+    }
+  ]
+  const menuSectionC = [
+    {
+      title:  t("footertitleMetodePembayaran"),
+      arr: [
+        // { label: t("footerEmoney"), url: "e-money" },
+        // { label: t("footerInternetBanking"), url: "internet-banking" },
+        { label: t("footerVirtualAccount"), url: process.env.NEXT_PUBLIC_FAQ_WEB+"list-content/Vkc1d1VsQlJQVDA9/Vkc1d1dsQlJQVDA9/VkZaU2FrNUJQVDA9"},
+        // { label: t("footerKartuDebit"), url: "kartu-debit-kredit" },
+        // { label: t("footerCicilanTanpaKartuKredit"), url: "cicil-tanpa-kartu-kredit" },
+        // { label: t("footerPembayaranGerai"), url: "pembayaran-di-gerai" },
+        // { label: t("footerPembayaranQris"), url: "qris" },
+      ]
+    }
+  ]
+  const menuSectionD = [
+    {
+      title:  t("footertitleOpsiPengiriman"),
+      arr:[
+        { label: t("LabelfooterReguler"), url: process.env.NEXT_PUBLIC_FAQ_WEB+"list-content/Vkc1d1VsQlJQVDA9/Vkc1d1ZsQlJQVDA9/VkZaU2JrMW5QVDA9" },
+        { label: t("footerKargo"), url: process.env.NEXT_PUBLIC_FAQ_WEB+"list-content/Vkc1d1VsQlJQVDA9/Vkc1d1ZsQlJQVDA9/VkZaU2JrMW5QVDA9" },
+        { label: t("footerInstant"), url: process.env.NEXT_PUBLIC_FAQ_WEB+"list-content/Vkc1d1VsQlJQVDA9/Vkc1d1ZsQlJQVDA9/VkZaU2JrMW5QVDA9" },
+      ],
+    },
+    // {
+    //   title: t("footertitleKeamananpembayaran"),
+    //   obj: "image",
+    //   arr: ["visa", "mastercard"]
+    // }
+  ];
+
+  return (
+    <footer className="bg-primary-700 py-8 relative">
+      {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0085 */}
+      {/* <div className="absolute bottom-2 right-2 text-sm text-white">
+        commit hash : <strong>{process.env.COMMIT_HASH}</strong>
+      </div> */}
+      <div className="max-w-7xl mx-auto px-10">
+        <div className="flex gap-[100px]">
+          {/* Left side menu sections */}
+          <div className="flex w-[825px] gap-x-[72px]">
+            <div className="flex flex-col gap-[30px]">
+              {menuSectionA.map((items,index) => (
+                <MenuSection key={index} title={items.title} items={items.arr} />
+              ))}
+            </div>
+            <div className="flex flex-col gap-[30px]">
+            {menuSectionB.map((items,index) => (
+                <MenuSection key={index} title={items.title} items={items.arr} />
+              ))}
+            </div>
+            <div className="flex flex-col gap-[30px]">
+            {menuSectionC.map((items,index) => (
+                <MenuSection key={index} title={items.title} items={items.arr} />
+              ))}
+            </div>
+            <div className="flex flex-col gap-[30px]">
+            {menuSectionD.map((items,index) => (
+                <MenuSection key={index} obj={items.obj || ''} title={items.title} items={items.arr} />
+              ))}
+            </div>
+          </div>
+
+          {/* Right side sections */}
+          <div className="flex w-[275px] flex-col gap-10">
+            <div className="flex flex-col gap-4">
+              <h3 className="font-bold text-sm text-white">
+                {t("footertitleUnduhMuatmuat")}
+              </h3>
+              <Image
+                src={
+                  process.env.NEXT_PUBLIC_ASSET_REVERSE + "/img/GooglePlay.png"
+                }
+                alt="Get it on Google Play"
+                width={123}
+                height={38}
+                className="cursor-pointer"
+                onClick={() =>
+                  window.open(
+                    "https://play.google.com/store/apps/developer?id=PT.+AZLOGISTIK+DOT+COM"
+                  )
+                }
+              />
+            </div>
+
+            <div className="flex flex-col gap-[10px]">
+              <Image
+                src={
+                  process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                  "/img/muatmuat-jalan-mudah-bersama.png"
+                }
+                alt="muatmuat logo"
+                width={223}
+                height={68}
+              />
+              <div className="flex gap-4">
+                <SocialIcon
+                  href="https://id.linkedin.com/company/muatmuat-indonesia"
+                  name="linkedin"
+                />
+                <SocialIcon
+                  href="https://www.facebook.com/profile.php?id=61550737480514"
+                  name="facebook"
+                />
+                <SocialIcon
+                  href="https://www.instagram.com/muatmuat_id/?hl=id"
+                  name="instagram"
+                />
+                <SocialIcon
+                  href="https://www.tiktok.com/@muatmuat_id"
+                  name="tiktok"
+                />
+                <SocialIcon
+                  href="https://www.youtube.com/@MuatMuat_ID"
+                  name="youtube"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <ContactInfo icon={Phone} text="+62 823-3245-1012" />
+                <ContactInfo icon={Mail} text="cs@muatmuat.com" />
+                <ContactInfo
+                  icon={MapPin}
+                  text="Jl. Kedungdoro No. 101 - 101 A, Surabaya 60261, Indonesia"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Copyright */}
+        <div className="mt-12 font-semibold text-center text-white">
+          <div className="border border-neutral-50/10 mb-5"></div>
+          ©2023 PT. AZLogistik Dot Com
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default FooterContainer;

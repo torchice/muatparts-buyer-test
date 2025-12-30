@@ -1,0 +1,29 @@
+export const numberFormatMoney = (val,x=1)=>{
+    let tmpVal = val*x
+    if(isNaN(tmpVal)) return 0;
+    if(typeof val==='string') tmpVal=parseFloat(val.replace('Rp','').replaceAll('.','').replaceAll(" ",""))*x
+    let currency = new Intl.NumberFormat('id-ID',{
+        style:'currency',
+        currency:'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(tmpVal);
+    currency = currency.replace(/\s/g, '');
+    return currency;
+}
+
+export const ThousandSeparator=(x)=> {
+    // const val= x.toLocaleString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ".")
+    // const lastIdx = val.lastIndexOf('.')
+    // const string = val.toString().slice(0,lastIdx) + ','+val.slice(lastIdx+1)
+    const thousandSeparator = new Intl.NumberFormat("id-ID").format(x)
+    return thousandSeparator
+}
+
+export const formatLargeNumber = (num) => {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1).replace('.', ',') + " rb";
+    } else {
+        return num.toString();
+    }
+}

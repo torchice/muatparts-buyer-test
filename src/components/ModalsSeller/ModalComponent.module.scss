@@ -1,0 +1,15 @@
+.main{
+    position: fixed;
+    left: 0;
+}
+.closeRed{
+    path{
+        fill: #C22716;
+        stroke: #C22716;
+    }
+}
+.closeBlue{
+    path{
+        stroke: var(--primary-700);
+    }
+}

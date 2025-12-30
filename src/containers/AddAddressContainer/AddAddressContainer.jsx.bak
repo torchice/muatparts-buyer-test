@@ -1,0 +1,637 @@
+"use client";
+
+import DefaultInputComponent from "@/components/DefaultInputComponent/DefaultInputComponent";
+import style from "./AddAddressContainer.module.scss";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Dropdown from "@/components/Dropdown/Dropdown";
+import {
+  addManagementLocationZustand,
+  userLocationZustan,
+} from "@/store/manageLocation/managementLocationZustand";
+import Checkbox from "@/components/Checkbox/Checkbox";
+import Button from "@/components/Button/Button";
+import SWRHandler from "@/services/useSWRHook";
+import debounce from "@/libs/debounce";
+import { userZustand } from "@/store/auth/userZustand";
+import ModalComponent from "@/components/Modals/ModalComponent";
+import Input from "@/components/Input/Input";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import { handleChangeInput } from "@/libs/services";
+// LBM - Multibahasa Optimization
+import { useLanguage } from "@/context/LanguageContext";
+function AddAddressContainer({
+  classname,
+  onClickManual,
+  onBookmark,
+  onUnBookmark,
+  onClickManlok,
+  onClickSave,
+}) {
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0526
+  const {t} = useLanguage()
+  const mainRef = useRef(null);
+  const { id } = userZustand();
+  const manlokZustand = addManagementLocationZustand();
+  const { locations, setLocation } = userLocationZustan();
+  const [getAddress, setAddress] = useState({
+    Name: "",
+    Address: "",
+    AddressDetail: "",
+    Latitude: 0,
+    Longitude: 0,
+    Province: "",
+    ProvinceID: 0,
+    City: "",
+    CityID: 0,
+    District: "",
+    DistrictID: 0,
+    PostalCode: "",
+    PicName: "",
+    PicNoTelp: "",
+    UsersID: id,
+    PlaceID: "",
+    IsMainAddress: 0,
+  });
+  const [showLocationSearch, setShowLocationSearch] = useState(false);
+  const [showKodePosSearch, setShowKodePosSearch] = useState(false);
+  const [showKodePosModal, setShowKodePosModal] = useState(false);
+
+  const [getLocationNotFound, setLocationNotFound] = useState();
+  const [getDefaultPostalCode, setDefaultPostalCode] = useState([]);
+  const [getDistrictID, setDistrictID] = useState("");
+  const [getPostalCodes, setPostalCodes] = useState([]);
+  const [validation, setValidation] = useState([]);
+
+  const { useSWRHook, useSWRMutateHook } = SWRHandler();
+  const { data: list_postal_code_not_found } = useSWRHook(
+    getLocationNotFound?.DistrictID
+      ? "v1/postalcode_by_district/" + getLocationNotFound?.DistrictID
+      : null
+  );
+  const { data: list_lokasi, trigger: triggerGetAddress } = useSWRMutateHook(
+    process.env.NEXT_PUBLIC_GLOBAL_API + `v1/autocompleteStreet`
+  );
+  const { trigger, data: list_new_lokasi } = useSWRMutateHook(
+    process.env.NEXT_PUBLIC_GLOBAL_API + "v1/autocompleteStreetLocal"
+  );
+  const { trigger: triggerFetchPostalCode, data: list_postal_code } =
+    useSWRMutateHook(
+      process.env.NEXT_PUBLIC_GLOBAL_API + "v1/district_by_token"
+    );
+  const { trigger: triggerSave } = useSWRMutateHook(
+    process.env.NEXT_PUBLIC_GLOBAL_API + "v1/muatparts/profile/location"
+  );
+  const { trigger: triggerUpdate, isMutatingUpdated } = useSWRMutateHook(
+    "v1/muatparts/profile/location",
+    "put"
+  );
+
+  function handleSaveNewLocation() {
+    if (!getLocationNotFound?.Description)
+      return setValidation((a) => [...a, "new_location"]);
+    setAddress((a) => ({
+      ...a,
+      District: getLocationNotFound?.DistrictName,
+      DistrictID: getLocationNotFound?.DistrictID,
+      Province: getLocationNotFound?.ProvinceName,
+      ProvinceID: getLocationNotFound?.ProvinceID,
+      City: getLocationNotFound?.CityName,
+      CityID: getLocationNotFound?.CityID,
+      PostalCode: getLocationNotFound?.PostalCode,
+    }));
+    // manlokZustand.setAllState({
+    //     ...manlokZustand,
+    //     District:getLocationNotFound?.DistrictName,
+    //     DistrictID:getLocationNotFound?.DistrictID,
+    //     Province:getLocationNotFound?.ProvinceName,
+    //     ProvinceID:getLocationNotFound?.ProvinceID,
+    //     City:getLocationNotFound?.CityName,
+    //     CityID:getLocationNotFound?.CityID,
+    //     PostalCode:getLocationNotFound?.PostalCode
+    // })
+    setShowKodePosModal(false);
+    setValidation(
+      validation.filter(
+        (a) =>
+          ![
+            "District",
+            "DistrictID",
+            "Province",
+            "ProvinceID",
+            "City",
+            "CityID",
+            "PostalCode",
+            "Address",
+          ].includes(a)
+      )
+    );
+  }
+  {
+    /* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB-0306 */
+  }
+  function handleSave() {
+    if (!/^\d+$/.test(getAddress.PicNoTelp) || getAddress.PicNoTelp.length < 8 || getAddress.PicNoTelp.length > 15) {
+      if (!validation.includes("PicNoTelp")) {
+        setValidation((prev) => [...prev, "PicNoTelp"]);
+      }
+      return; // Prevent saving if PicNoTelp validation fails
+    }
+    const isRquired = Object.entries(getAddress)
+      .map(([key, val]) => {
+        if (
+          !val &&
+          key !== "IsMainAddress" &&
+          key !== "Notes" &&
+          key !== "Void" &&
+          key !== "isTroli" &&
+          key !== "PlaceID"
+        )
+          return key;
+        return null;
+      })
+      ?.filter((a) => a);
+    if (isRquired.length) return setValidation(isRquired);
+    if (getAddress?.ID) {
+      triggerUpdate({ param: getAddress }).then((a) => {
+        if (a.status == 200) {
+          onClickSave?.();
+          manlokZustand?.clearState();
+        }
+      });
+    } else {
+      triggerSave({ param: getAddress }).then((a) => {
+        if (a?.status == 200) {
+          onClickSave?.();
+          manlokZustand?.clearState();
+        }
+      });
+    }
+  }
+
+  function handleInput(label, value) {
+    if (value) setValidation(validation.filter((a) => a !== label));
+    handleChangeInput({
+      value,
+      key: label,
+      setState: setAddress,
+      setValidation,
+      validation,
+    });
+  }
+  function handleSelectLocation(id, title) {
+    handleInput("Address", title);
+    handleInput("PlaceID", id);
+    triggerFetchPostalCode({ placeId: id });
+    setShowLocationSearch(false);
+  }
+  const handleGetLocation = useCallback(
+    debounce((val) => {
+      triggerGetAddress({ phrase: val });
+    }, 600),
+    []
+  );
+  const handleGetNewLokasi = useCallback(
+    debounce((val) => {
+      trigger({ phrase: val }).then((response) => {
+        const data = response?.data?.Data?.data?.Data;
+        if (data?.length) {
+          setShowKodePosSearch(true);
+        }
+      });
+    }, 600),
+    []
+  );
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mainRef.current && !mainRef.current.contains(event.target)) {
+        setShowLocationSearch(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+  useEffect(() => {
+    // if(list_postal_code?.data?.Data?.Message?.Message)
+    if (list_postal_code?.data?.Data?.Districts?.[0]?.PostalCodes?.length) {
+      let data = list_postal_code?.data?.Data?.Districts?.[0];
+      let kodepos = list_postal_code?.data?.Data?.CompleteLocation?.postal;
+      let newData =
+        list_postal_code?.data?.Data?.Districts?.[0]?.PostalCodes?.map(
+          (val) => {
+            return {
+              name: val?.ID,
+              value: val?.PostalCode,
+            };
+          }
+        ) ?? [];
+      setPostalCodes(newData);
+      setAddress((a) => ({
+        ...a,
+        City: data?.CityName,
+        CityID: data?.CityID,
+        District: data?.District,
+        DistrictID: data?.DistrictID,
+        Province: data?.ProvinceName,
+        ProvinceID: data?.ProvinceID,
+        PostalCode: kodepos,
+        Latitude: list_postal_code?.data?.Data?.Lat,
+        Longitude: list_postal_code?.data?.Data?.Long,
+      }));
+    }
+    if (
+      !list_postal_code?.data?.Data?.Districts?.[0]?.PostalCodes?.length &&
+      getAddress?.Address
+    ) {
+      setAddress((a) => ({
+        ...a,
+        Latitude: list_postal_code?.data?.Data?.Message?.lat,
+        Longitude: list_postal_code?.data?.Data?.Message?.lng,
+      }));
+      setShowKodePosModal(true);
+    }
+  }, [list_postal_code]);
+  useEffect(() => {
+    if (list_postal_code_not_found?.Data?.length) {
+      const tmp = list_postal_code_not_found?.Data?.map((val) => ({
+        value: val?.PostalCode,
+        name: val?.PostalCode,
+      }));
+      setPostalCodes(tmp);
+    }
+  }, [list_postal_code_not_found]);
+  useEffect(() => {
+    if (manlokZustand?.ID) {
+      delete manlokZustand?.isTroli;
+      setAddress(manlokZustand);
+      setPostalCodes([
+        { value: manlokZustand?.PostalCode, name: manlokZustand?.PostalCode },
+      ]);
+    }
+  }, []);
+  useEffect(() => {
+    if (!locations?.length) handleInput("IsMainAddress", 1);
+  }, [locations]);
+  return (
+    <div
+      ref={mainRef}
+      className={`${style.main} flex-col ${
+        validation.length ? "gap-6" : "gap-4"
+      } text-neutral-900 h-full overflow-y-auto pr-2 ${classname}`}
+    >
+      {/* modal kodepos notfound */}
+      <ModalComponent
+        hideHeader
+        preventAreaClose
+        isOpen={showKodePosModal}
+        full
+        setClose={() => setShowKodePosModal(false)}
+      >
+        <div className="flex flex-col justify-center items-center gap-6 w-[472px] p-4">
+          <div className="pb-4 border-b border-neutral-400 w-full text-center semi-sm">
+            {t("LabelmodalTambahAlamatIsiKelurahan/Kecamatan/KodePos")}
+          </div>
+          <div className="relative">
+            <Input
+              classname={`!w-[448px] ${
+                validation?.some((a) => a === "new_location")
+                  ? "input-error"
+                  : ""
+              }`}
+              placeholder={t("LabelmodalTambahAlamatCariKelurahan/Kecamatan/KodePos")}
+              value={getLocationNotFound?.Description}
+              changeEvent={(e) => {
+                if (e.target.value) {
+                  let tmp = validation?.filter((a) => a !== "new_location");
+                  setValidation(tmp);
+                }
+                setLocationNotFound((a) => ({
+                  ...a,
+                  Description: e.target.value,
+                }));
+                handleGetNewLokasi(e.target.value);
+              }}
+              icon={{
+                left: "/icons/search.svg",
+                right: getLocationNotFound?.Description ? (
+                  <span onClick={() => setLocationNotFound((a) => ({
+                    ...a,
+                    Description: '',
+                  }))}>
+                    <IconComponent
+                      src={"/icons/closes.svg"}
+                      width={12}
+                      height={12}
+                    />
+                  </span>
+                ) : (
+                  ""
+                ),
+              }}
+            />
+            {showKodePosSearch && (
+              <ul className="absolute top-9 bg-neutral-50 h-[172px] list-none flex flex-col gap-2 w-full rounded overflow-y-auto shadow-2xl">
+                {list_new_lokasi?.data?.Data?.data?.Data?.length
+                  ? list_new_lokasi?.data?.Data?.data?.Data?.map((val, i) => {
+                      return (
+                        <li
+                          key={i}
+                          onClick={() => {
+                            setLocationNotFound(val);
+                            setShowKodePosSearch(false);
+                          }}
+                        >
+                          <span className="p-4 semi-xs hover:text-primary-700 select-none cursor-pointer">
+                            {val?.Description}
+                          </span>
+                        </li>
+                      );
+                    })
+                  : ""}
+              </ul>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              color="primary_secondary"
+              Class="!h-8"
+              onClick={() => setShowKodePosModal(false)}
+            >
+              {t("LabelmodalTambahAlamatBatalkan")}
+            </Button>
+            <Button Class="!h-8" onClick={handleSaveNewLocation}>
+              {t("LabelmodalTambahAlamatSimpan")}
+            </Button>
+          </div>
+        </div>
+      </ModalComponent>
+
+      <span className="bold-base -mb-2 ">{t("LabelmodalTambahAlamatDetailAlamat")}</span>
+      <DefaultInputComponent
+        classSuppertiveTextLeft={"!top-8"}
+        supportiveText={{
+          left: validation?.some((a) => a === "Name") ? t("LabelmodalTambahAlamatLabelAlamatwajibdiisi") : "",
+        }}
+        isError={validation?.some((a) => a === "Name")}
+        label={t("LabelmodalTambahAlamatLabelAlamat")}
+        placeholder={t("LabelmodalTambahAlamatMasukkanlabelalamatmaks.30karakter")}
+        maxLength={30}
+        onChange={(e) => handleInput("Name", e.target.value)}
+        value={getAddress.Name}
+        // 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - LB - 0142
+        classLabel={`!font-medium !text-xs !leading-[10px]`}
+        classname={`!gap-2`}
+      />
+      <div className="relative">
+        <DefaultInputComponent
+          classSuppertiveTextLeft={"!top-8"}
+          supportiveText={{
+            left: validation?.some((a) => a === "Address")
+              ? t("LabelmodalTambahAlamatAlamatwajibdiisi")
+              : "",
+          }}
+          isError={validation?.some((a) => a === "Address")}
+          label={`${t("LabelmodalTambahAlamatAlamat")}*`}
+          placeholder={t("LabelmodalTambahAlamatMasukkanalamat")}
+          onChange={(e) => {
+            handleInput("Address", e.target.value);
+            handleGetLocation(e.target.value);
+          }}
+          focusEvent={() => setShowLocationSearch(true)}
+          value={getAddress?.Address}
+          classLabel={`!font-medium !text-xs !leading-[10px]`}
+          classname={`!gap-2`}
+          // blurEvent={()=>setShowLocationSearch(false)}
+          // supportiveText={{right:<span className='text-neutral-600 medium-xs mt-2'>Alamat tidak ditemukan?<span className="text-primary-700 cursor-pointer"
+          //     onClick={()=>setShowKodePosModal(true)}> Isi alamat manual</span></span> }}
+        />
+        {showLocationSearch && (
+          <div
+            className="list-none flex flex-col absolute border border-neutral-600 top-[70px] w-full gap-4 bg-neutral-50 rounded p-3 z-20"
+            onBlur={() => setShowLocationSearch(false)}
+          >
+            <div className="flex gap-3 items-center pb-3 border-b border-neutral-400">
+              <IconComponent
+                src={"/icons/pilih-lokasi-blue.svg"}
+                width={20}
+                height={20}
+              />
+              <span className="medium-sm text-primary-700">{t("LabelmodalTambahAlamatPilihLokasi")}</span>
+            </div>
+            <div className="flex flex-col gap-3 pb-3">
+              <span className="medium-xs text-neutral-600">
+                {t("LabelmodalTambahAlamatHasilPencarian")}
+              </span>
+              <ul className="list-none flex flex-col gap-3 max-h-[98px] h-full overflow-y-auto">
+                {list_lokasi?.data?.length ? (
+                  list_lokasi?.data?.map((val, i) => {
+                    return (
+                      <li
+                        key={i}
+                        onClick={() =>
+                          handleSelectLocation(val?.ID, val?.Title)
+                        }
+                      >
+                        <div className="flex items-start justify-between select-none cursor-pointer gap-2">
+                          <div className="flex gap-2">
+                            <span className="w-5 h-5">
+                              <IconComponent
+                                width={20}
+                                height={20}
+                                src={"/icons/location.svg"}
+                              />
+                            </span>
+                            <span className="medium-xs">{val?.Title}</span>
+                          </div>
+                          <span className="w-5 h-5">
+                            <IconComponent
+                              width={20}
+                              height={20}
+                              src={"/icons/bookmark-outline.svg"}
+                            />
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })
+                ) : (
+                  <li>
+                    <div className="flex w-full text-center">
+                      {t("LabelmodalTambahAlamatTidakadadata")}
+                    </div>
+                  </li>
+                )}
+              </ul>
+              <div className="medium-xs py-2 px-3 rounded border border-primary-700 flex gap-2 items-center">
+                <IconComponent
+                  src={"/icons/tips-white.svg"}
+                  classname={style.info_icon}
+                />
+                <span className="text-primary-700">
+                  {t("LabelmodalTambahAlamatInputLokasiyangterdekatdenganAnda")}
+                </span>
+              </div>
+            </div>
+            {/* 25. 07 - QC Plan - Web Apps - Marketing Muatparts - LB - 0028 */}
+            {/* <div className="flex flex-col gap-3 w-full">
+              <div className="flex w-full justify-between select-none">
+                <span className="text-neutral-600 medium-xs">
+                  {t("LabelmodalTambahAlamatManajemenLokasi")}
+                </span>
+                <span className="text-primary-700 medium-xs cursor-pointer">
+                  {t("LabelmodalTambahAlamatLihatManajemenLokasi")}
+                </span>
+              </div>
+              {locations?.length ? (
+                <ul className="list-none flex flex-col gap-3 max-h-[98px] overflow-y-auto">
+                  {locations?.map((val, i) => {
+                    return (
+                      <li key={i}>
+                        <div className="flex justify-between items-start">
+                          <div className="flex gap-2">
+                            <span className="w-5 h-5 cursor-pointer">
+                              <IconComponent
+                                classname={style.bookmark}
+                                src={"/icons/bookmark-outline.svg"}
+                                width={20}
+                                height={20}
+                              />
+                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className="medium-xs">{val?.Name}</span>
+                              <span className="medium-xs">{val?.Address}</span>
+                            </div>
+                          </div>
+                          <span className="w-5 h-5 cursor-pointer">
+                            <IconComponent
+                              src={"/icons/edit.svg"}
+                              width={20}
+                              height={20}
+                            />
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                ""
+              )}
+            </div> */}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col  relative">
+        <span
+          className={`medium-xs ${
+            validation.some((a) => a === "District") ? "text-error-500" : ""
+          }`}
+        >
+          {t("LabelmodalTambahAlamatKecamatan/Kota/Provinsi")}{" "}
+          {validation.some((a) => a === "District") ? t("LabelmodalTambahAlamatwajibdiisi") : ""}
+        </span>
+        <span className="medium-xs">
+          {getAddress?.District
+            ? getAddress?.District +
+              "/" +
+              getAddress?.City +
+              "/" +
+              getAddress?.Province
+            : "-"}
+        </span>
+      </div>
+      <div className="flex flex-col gap-3 relative">
+        <span className="medium-xs leading-3">{t("LabelmodalTambahAlamatKodePos")}*</span>
+        <Dropdown
+          disabled={!getAddress.CityID}
+          options={getPostalCodes}
+          onSelected={(a) => handleInput("PostalCode", a[0]?.["value"])}
+          defaultValue={getPostalCodes?.filter(
+            (a) => a?.value === getAddress?.PostalCode
+          )}
+          placeholder={t("LabelmodalTambahAlamatMasukkanKodePos")}
+          classname={`!w-full ${
+            validation.some((a) => a === "PostalCode")
+              ? "!border !border-error-500"
+              : ""
+          }`}
+        />
+        {validation.some((a) => a === "PostalCode") && (
+          <span className="absolute top-16 text-error-500 medium-xs">
+            {t("LabelmodalTambahAlamatKodePoswajibdiisi")}
+          </span>
+        )}
+      </div>
+      <DefaultInputComponent
+        classSuppertiveTextLeft={"!top-[85px]"}
+        isError={validation?.some((a) => a === "AddressDetail")}
+        value={getAddress?.AddressDetail}
+        type="textarea"
+        label={`${t("LabelmodalTambahAlamatDetailAlamat")}*`}
+        placeholder={
+         t("LabelmodalTambahAlamatMasukkanalamatlengkapdengandetail.\nContoh:NamaJalanGedungNo.Rumah/PatokanBlok/Unit")
+        }
+        onChange={(e) => handleInput("AddressDetail", e.target.value)}
+        // 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - LB - 0141
+        classTextarea={
+          "!h-[80px] !p-3 placeholder:text-[12px] text-[12px] !leading-3 !font-medium !placeholder:p-2"
+        }
+        supportiveText={{
+          left: validation?.some((a) => a === "AddressDetail")
+            ? t("LabelmodalTambahAlamatDetailAlamatwajibdiisi")
+            : "",
+          right: `${
+            getAddress?.AddressDetail?.length
+              ? getAddress?.AddressDetail.length
+              : 0
+          }/225`,
+        }}
+        classSuppertiveTextRight={"!top-[88px]"}
+        classLabel={`!font-medium !text-xs !leading-[10px]`}
+        classname={`!gap-2`}
+      />
+      <DefaultInputComponent
+        classSuppertiveTextLeft={"!top-8"}
+        supportiveText={{
+          left: validation?.some((a) => a === "PicName")
+            ? t("LabelmodalTambahAlamatNamaPICwajibdiisi")
+            : "",
+        }}
+        classSuppertiveTextRight={"!leading-[8px]"}
+        isError={validation?.some((a) => a === "PicName")}
+        value={getAddress.PicName}
+        label={`${t("LabelmodalTambahAlamatNamaPIC")}*`}
+        placeholder={t("LabelmodalTambahAlamatMasukkannamaPICLokasi")}
+        onChange={(e) => handleInput("PicName", e.target.value)}
+        classLabel={`!font-medium !text-xs !leading-[10px]`}
+        classname={`!gap-2`}
+      />
+      <DefaultInputComponent
+        classSuppertiveTextLeft={"!top-8"}
+        supportiveText={{
+          left: !getAddress.PicNoTelp ? t("LabelmodalTambahAlamatNo.HPPICwajibdiisi") : validation?.some((a) => a === "PicNoTelp")
+            ? "No. HP PIC harus berupa 8 - 15 digit angka"
+            : "",
+        }}
+        isError={validation?.some((a) => a === "PicNoTelp")}
+        value={getAddress.PicNoTelp}
+        label={`${t("LabelmodalTambahAlamatNo.HPPIC")}*`}
+        placeholder={t("LabelmodalTambahAlamatContoh:08xxxxxxxxxxx")}
+        onChange={(e) => handleInput("PicNoTelp", e.target.value)}
+        classLabel={`!font-medium !text-xs !leading-[10px]`}
+        classname={`!gap-2`}
+      />
+      <Checkbox
+        label={t("LabelmodalTambahAlamatJadikanalamatsebagaialamatutama")}
+        disabled={!locations.length}
+        onChange={(a) => handleInput("IsMainAddress", a?.checked ? 1 : 0)}
+        value={getAddress?.IsMainAddress}
+        checked={getAddress?.IsMainAddress == 1}
+      />
+      <Button Class="!max-w-full" onClick={handleSave}>
+        {t("LabelmodalTambahAlamatSimpan")}
+      </Button>
+    </div>
+  );
+}
+
+export default AddAddressContainer;

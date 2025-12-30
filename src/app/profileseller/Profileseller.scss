@@ -1,0 +1,37 @@
+.manlokContainer {
+  margin: 0 !important;
+
+  div {
+    div.space-y-4.my-4 {
+      // ini space-y-4
+      margin: 0 !important;
+
+      div.flex.items-baseline {
+        // ini flex items-baseline
+        // gap: 46px !important;
+        align-items: center;
+        width: 100%;
+        padding: 1rem 2rem !important;
+        margin-top: 0;
+
+        &:nth-child(odd) {
+          background-color: #fff;
+        }
+
+        &:nth-child(even) {
+          background-color: #f5f5f5;
+        }
+
+        &:last-child {
+          border-bottom-left-radius: 6px;
+          border-bottom-right-radius: 6px;
+        }
+
+        label {
+          width: 280px !important;
+          padding: 0 !important;
+        }
+      }
+    }
+  }
+}

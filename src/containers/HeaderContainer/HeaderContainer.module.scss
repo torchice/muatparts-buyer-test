@@ -1,0 +1,84 @@
+.main {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 90;
+}
+.inputSearch {
+  width: 100%;
+}
+.inputSearchMobile {
+  width: calc(100% - 16px - 16px);
+  div {
+    height: 32px;
+  }
+}
+.iconnSearch {
+  path {
+    // stroke: var(--primary-300);
+    fill: var(--primary-700);
+  }
+}
+.iconBackRed {
+  path {
+    stroke: #c22716;
+  }
+}
+.iconBackWhite {
+  path {
+    stroke: var(--neutral-50);
+  }
+}
+.iconBackBlue {
+  path {
+    stroke: var(--primary-700);
+  }
+}
+.inputMobile {
+  width: 100%;
+  div {
+    height: 32px;
+    // background-color: var(--neutral-50);
+    // border: none;
+  }
+  input {
+    width: 100%;
+  }
+}
+.inputMobile:hover {
+  div {
+    border: none;
+  }
+}
+.inputMobile:focus {
+  div {
+    border: none;
+  }
+}
+.inputMobileCompact {
+  width: 100%;
+}
+.inputMobileCompact > div {
+  background-color: var(--neutral-50);
+}
+.iconWhiteGarasi {
+  path {
+    // stroke-width: 2px;
+    fill: var(--neutral-50);
+  }
+}
+.iconCartMobile {
+  path {
+    fill: none;
+    stroke: var(--neutral-50);
+  }
+}
+.iconCloseBlack {
+  path {
+    stroke: var(--neutral-900);
+  }
+}
+.muatMini {
+  margin-left: calc(50% - 16px - 16px - 24px - 8px - 8px);
+}

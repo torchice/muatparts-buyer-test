@@ -1,0 +1,42 @@
+import { Fragment } from "react"
+import ProductComponent from "@/components/ProductComponent/ProductComponent"
+// 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+import useSellerStore from "@/store/seller";
+// LBM - Multibahasa Optimization
+import { useLanguage } from "@/context/LanguageContext";
+
+const ListEtalaseProduct = ({
+    sellerProfile,
+}) => {
+    const {t} = useLanguage()
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+    const { productByEtalase } = useSellerStore();
+    return (
+        <div className="flex gap-2 flex-wrap">
+            {productByEtalase.map((product, key ) => (
+                <Fragment key={key}>
+                    {/* LBM - OLIVER - IMP PRODUCT COMPONENT CAKRA - MP - 020 */}
+                    {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0529 */}
+                    <ProductComponent
+                        ID={product.id}
+                        Photo={product.imageSrc}
+                        SalesType={product.isGrosir ? t("LabelproductCardGrosir") : ""}
+                        Stock={product.stock}
+                        Grade={product.grade}
+                        Name={product.title}
+                        PriceBeforeDiscount={product.originalPrice}
+                        PriceAfterDiscount={product.discountedPrice}
+                        Discount={product.discount}
+                        Store={sellerProfile?.name}
+                        City={sellerProfile?.location}
+                        Rating={product.rating}
+                        SoldCount={product.sales}
+                        Wishlist={product.isWishlisted}
+                    />
+                </Fragment>
+            ))}
+        </div>
+    )
+}
+
+export default ListEtalaseProduct

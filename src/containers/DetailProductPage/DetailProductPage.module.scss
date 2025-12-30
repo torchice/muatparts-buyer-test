@@ -1,0 +1,13 @@
+.main{
+    display:flex;
+    // max-width: 1280px;
+    width: 100%;
+    padding-block: 24px;
+    flex-direction: column;
+    gap: 24px;
+}
+.breadcrumb{
+    div:last-child{
+        span{font-weight: 600;}
+    }
+}

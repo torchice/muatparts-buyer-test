@@ -1,0 +1,74 @@
+import Bubble from "@/components/Bubble/Bubble";
+import ButtonBottomMobile from "@/components/ButtonBottomMobile/ButtonBottomMobile";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import { useLanguage } from "@/context/LanguageContext";
+
+const Filter = ({
+    tempRating,
+    setTempRating,
+    // FIX BUG Pengecekan Ronda Muatparts LB-0089
+    onCancelFilter,
+    onSaveFilter
+}) => {
+    const { t } = useLanguage();
+    const ratingOptions = [5, 4, 3, 2, 1].map(stars => ({
+        id: `rating-${stars}`,
+        label: `${stars} ${t("labelStar")}`,
+        value: stars
+    }));
+
+    return (
+        <div className="containerMobile min-h-screen h-full bg-[#FCFCFC]">
+            <div className="flex flex-col self-center w-full">
+                <div className="flex flex-col w-full">
+                <div className="flex gap-10 justify-between items-center w-full font-semibold">
+                    <div className="self-stretch my-auto text-black">{t("labelStar")}</div>
+                </div>
+                <div className="flex flex-wrap gap-2 items-start mt-4 w-full font-medium text-black">
+                    {ratingOptions.map((option, key) => {
+                        const checked = tempRating.find(item => item === option.value)
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => {
+                                    // LBM - OLIVER - RAPIIN CODINGAN - MP - 020
+                                    setTempRating(prevState => {
+                                        if (prevState.includes(option.value)) {
+                                          return prevState.filter(item => item !== option.value)
+                                        } else {
+                                          return [...prevState, option.value]
+                                        }
+                                    })
+                                }}
+                            >
+                                <Bubble
+                                    classname={`border ${checked?'!border-primary-700 !text-primary-700 !bg-primary-50': '!border-neutral-200 !bg-neutral-200'} !text-sm !text-neutral-900 !font-medium`}
+                                >
+                                    <IconComponent
+                                        src="/icons/star.svg"
+                                        size={14}
+                                        height={14}
+                                    />
+                                    <span>
+                                        {option.label}
+                                    </span>
+                                </Bubble>
+                            </button>
+                        )
+                    })}
+                </div>
+                </div>
+            </div>
+            <ButtonBottomMobile
+                classname={`pt-3`}
+                // FIX BUG Pengecekan Ronda Muatparts LB-0089
+                onClickLeft={onCancelFilter}
+                onClickRight={onSaveFilter}
+                textLeft={t("buttonCancel")}
+                textRight={t("buttonSave")} 
+            />
+        </div>
+    );
+};
+
+export default Filter;

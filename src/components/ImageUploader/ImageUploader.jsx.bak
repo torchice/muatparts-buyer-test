@@ -1,0 +1,69 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import ImageUploaderWeb from "./ImageUploaderWeb";
+import ImageUploaderResponsive from "./ImageUploaderResponsive";
+import Toast from "../Toast/Toast";
+import axios from "axios";
+import SWRHandler from "@/services/useSWRHook";
+
+const baseUrl = `${process.env.NEXT_PUBLIC_GLOBAL_API}v1/`
+
+const ImageUploader = (props) => {
+  const [isMobile, setIsMobile] = useState(false);
+  const { useSWRMutateHook } = SWRHandler();
+  const {
+    data: dataUploadPhoto,
+    error: errorUploadPhoto,
+    trigger: uploadPhoto,
+    isMutating: isMutatingUploadPhoto,
+  } = useSWRMutateHook(
+    `${baseUrl}muatparts/product/photo`,
+    "POST",
+    (url, arg) => {
+      return axios({
+        url,
+        method: "POST",
+        data: arg,
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    }
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const handleFinishCrop = (value) => {
+    // const formData = new FormData();
+    // formData.append("file", value);
+    // return uploadPhoto(formData)
+    //   .then((data) => {
+    //     props.getImage(data.data.Data);
+    //   })
+    //   .catch(() => value);
+  };
+
+  const sharedProps = {
+    onFinishCrop: handleFinishCrop,
+    isLoading: isMutatingUploadPhoto,
+  };
+
+  if (isMobile) {
+    return <ImageUploaderResponsive {...props} {...sharedProps} />;
+  }
+  return (
+    <>
+      <Toast />
+      <ImageUploaderWeb {...props} {...sharedProps} />
+    </>
+  );
+};
+
+export default ImageUploader;

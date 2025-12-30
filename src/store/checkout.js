@@ -1,0 +1,33 @@
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+
+export const useCheckoutStore = create(
+  persist(
+    (set) => ({
+      // Initial state
+      buyNow: [],
+      isLoading: false,
+
+      checkPay: false,
+      setCheckPay: (value) => set({ checkPay: value }),
+
+      // Actions
+      setBuyNow: (value) => set({ buyNow: value }),
+      setPrice: (value) => set({ price: value }),
+
+      resetBuyNow: () =>
+        set({
+          buyNow: [],
+        }),
+    }),
+    {
+      name: "t-cok",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        buyNow: state.buyNow,
+        isLoading: state.isLoading,
+        // checkPay is intentionally omitted to prevent it from being persisted
+      }),
+    }
+  )
+);

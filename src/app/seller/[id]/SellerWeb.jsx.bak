@@ -1,0 +1,137 @@
+import NavigationTabs from "@/containers/Seller/Web/NavigationTabs";
+import ProfileSellerHeader from "@/containers/Seller/Web/ProfileSellerHeader/ProfileSellerHeader";
+import BerandaContainer from "@/containers/Seller/Web/Beranda/BerandaContainer";
+import EtalaseContainer from "@/containers/Seller/Web/Etalase/EtalaseContainer";
+import ReviewsContainer from "@/containers/Seller/Web/Review/ReviewsContainer";
+
+function SellerWeb({
+    activeTab,
+    onChangeTab,
+    tabs,
+    onRefreshVoucher,
+
+    // DARI API
+    isLoadingSellerProfile,
+    // LBM - OLIVER - PASSING STATE LOADING UNTUK SKELETON - MP - 020
+    isLoadingProductByBestSeller,
+    isLoadingProductByFavorite,
+    isLoadingProductByNewest,
+    isLoadingTabOne,
+    isLoadingProductByEtalase,
+    isLoadingTabTwo,
+    isLoadingTabThree,
+    sellerProfile,
+    sellerVouchers,
+    productByBestSeller,
+    productByFavorite,
+    productByNewest,
+    etalase,
+    productByEtalase,
+    productByEtalasePagination,
+    reviews,
+    reviewsPagination,
+
+    loading,
+    error,
+    // Shared search props
+    search,
+    setSearch,
+    searchQuery,
+    setSearchQuery,
+    defaultFilter,
+    filter,
+    setFilter,
+    selectedEtalase,
+    setSelectedEtalase
+}) {
+    // Common search handler for all tabs
+    const handleSearch = (e) => {
+      if (e.key === "Enter") {
+        setSearchQuery(search);
+      }
+    };
+  
+    const handleClearSearch = () => {
+      setSearch("");
+      setSearchQuery("");
+    };
+  
+    const searchProps = {
+      search,
+      setSearch,
+      searchQuery,
+      setSearchQuery,
+      onSearch: handleSearch,
+      onClearSearch: handleClearSearch,
+      defaultFilter,
+      filter,
+      setFilter,
+    };
+
+    const reviewProps = {
+      sellerProfile,
+      reviews,
+      pagination: reviewsPagination
+    }
+  
+    return (
+      <>
+        <main className="w-full flex justify-center py-[24px]">
+          <div className='w-[1200px] flex flex-col'>
+            {sellerProfile && <ProfileSellerHeader sellerProfile={sellerProfile} />}
+  
+            <div className="flex flex-col mt-6">
+              <NavigationTabs
+                tabs={tabs} 
+                activeTab={activeTab} 
+                onChangeTab={onChangeTab}
+              />
+            </div>
+            {activeTab === 0 && (
+              <BerandaContainer
+                // API
+                isLoadingTabOne={isLoadingTabOne}
+                sellerProfile={sellerProfile}
+                sellerVouchers={sellerVouchers}
+                productByBestSeller={productByBestSeller}
+                productByFavorite={productByFavorite}
+                productByNewest={productByNewest}
+                onRefreshVoucher={onRefreshVoucher}
+                // LBM - OLIVER - PASSING STATE LOADING UNTUK SKELETON - MP - 020
+                isLoadingProductByBestSeller={isLoadingProductByBestSeller}
+                isLoadingProductByFavorite={isLoadingProductByFavorite}
+                isLoadingProductByNewest={isLoadingProductByNewest}
+                {...searchProps}
+              />
+            )}
+            {activeTab === 1 && (
+              <EtalaseContainer
+                onChangeTab={onChangeTab}
+                selectedEtalase={selectedEtalase}
+                setSelectedEtalase={setSelectedEtalase}
+
+                // API
+                sellerProfile={sellerProfile}
+                etalase={etalase}
+                // LBM - OLIVER - PASSING STATE LOADING UNTUK SKELETON - MP - 020
+                isLoadingProductByEtalase={isLoadingProductByEtalase}
+                productByEtalase={productByEtalase}
+                pagination={productByEtalasePagination}
+
+                {...searchProps}
+              />
+            )}
+            {activeTab === 2 && (
+              <ReviewsContainer
+                loading={loading}
+                {...searchProps}
+                {...reviewProps}
+              />
+            )}
+          </div>
+        </main>
+      </>
+    );
+}
+
+export default SellerWeb

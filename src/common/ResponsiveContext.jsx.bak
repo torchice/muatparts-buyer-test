@@ -1,0 +1,221 @@
+import HeaderContainer from "@/containers/HeaderContainer"
+import { createContext, useCallback, useContext, useEffect, useState } from "react"
+
+export const ResponsiveContext = createContext(null)
+
+import React from "react"
+import DefaultScreen from "./DefaultScreen"
+import { viewport } from "@/store/viewport"
+import { headerProps } from "@/containers/HeaderContainer/headerProps"
+import FooterContainer from "@/containers/FooterContainer/FooterContainer"
+import { useCustomRouter } from "@/libs/CustomRoute"
+import BottomTabNavigation from "@/containers/BottomTabNavigation/BottomTabNavigation"
+import { useTranslation } from "@/services/languageTranslate"
+
+function ResponsiveProvider({ children }) {
+  const router = useCustomRouter()
+  const { setIsmobile, setWidthScreen, isMobile } = viewport()
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0756
+  const {t}=useTranslation()
+  const [getHeader, setHeader] = useState({
+    onBack: null,
+    onAction: null,
+    title: "",
+    showBackButton: true,
+    appBarType: "",
+    renderBack: null,
+    componentBackType: "back",
+    renderActionButton: null,
+    renderAppBar: null,
+    renderHeader: null,
+    shadow: true,
+    showReset: true,
+    defaultType: "",
+    withSearchBottom: "",
+    blankBackground: false,
+    bottomTabNavigation: false,
+    dataBottomTabNavigation: { title: t("HomeSellerIndexHome"), link: "/", onClick: null },
+    hideHeader:false,
+    hideFooter:false,
+  })
+  const [search, editSearch] = useState({
+    placeholder: "muatparts",
+    value: "",
+    tmp: "",
+    type: "text",
+    minLen: 0,
+    onSubmitForm: false,
+  })
+
+  const [screen, setScreen] = useState("")
+  const [getGlobalPadding, setGlobalPadding] = useState(true)
+  const { headerHeight } = headerProps()
+  const renderAppBarMobile = (elm) =>
+    setHeader((prev) => ({ ...prev, renderAppBar: elm }))
+  const renderHeader = (elm) =>
+    setHeader((prev) => ({ ...prev, renderHeader: elm }))
+  const setAppBar = ({
+    onBack = null,
+    onAction = null,
+    title = "",
+    showBackButton = true,
+    appBarType = "",
+    renderBack = null,
+    componentBackType = "back",
+    renderActionButton = null,
+    renderAppBar = null,
+    renderHeader = null,
+    shadow = true,
+    showReset = true,
+    defaultType = "",
+    withSearchBottom = "",
+    blankBackground = false,
+    bottomTabNavigation = false,
+    dataBottomTabNavigation = getHeader.dataBottomTabNavigation,
+    hideHeader=false,
+    hideFooter=false
+
+  }) => {
+    setHeader({
+      onBack: onBack,
+      onAction: onAction,
+      title: title,
+      showBackButton: showBackButton,
+      appBarType: appBarType,
+      renderBack: renderBack,
+      componentBackType: componentBackType,
+      renderActionButton: renderActionButton,
+      renderAppBar: renderAppBar,
+      renderHeader: renderHeader,
+      shadow: shadow,
+      showReset: showReset,
+      defaultType: defaultType,
+      withSearchBottom: withSearchBottom,
+      blankBackground: blankBackground,
+      bottomTabNavigation: bottomTabNavigation,
+      dataBottomTabNavigation: dataBottomTabNavigation,
+      hideHeader,
+      hideFooter
+    })
+  }
+  const setSearch = (val) => {
+    // 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - LB - 0207
+    let newVal=val
+    if(newVal?.tmp||newVal?.value){
+      newVal?.tmp?.trim()
+      newVal?.value?.trim()
+    }
+    return editSearch((prev) => ({ ...prev, ...val }))
+  }
+  const clearScreen = () => {
+    setScreen("")
+    setAppBar({
+      onBack: null,
+      title: "",
+      showBackButton: true,
+      appBarType: "",
+      renderAppBar: null,
+      renderHeader: null,
+      renderBack: null,
+      renderActionButton: null,
+      shadow: true,
+      defaultType: "",
+      componentBackType: "back",
+      withSearchBottom: "",
+      blankBackground: false,
+      bottomTabNavigation: false,
+      dataBottomTabNavigation: {
+        title: "Home",
+        link: "/",
+        onClick: null,
+      },
+    })
+  }
+  const handleBack = () => {
+    if (getHeader.onBack) {
+      getHeader.onBack()
+    } else {
+      clearScreen()
+      router.back()
+    }
+  }
+  const handleAction = () => {
+    if (getHeader.onAction) {
+      getHeader.onAction()
+    } else {
+      console.log("do something")
+    }
+  }
+  const handleResize = useCallback(() => {
+      if (typeof window !== "undefined") {
+        // const width = pathName.includes("/garasi") ? window.screen.width : window.innerWidth
+        const width = window.innerWidth
+        setWidthScreen(width)
+        setIsmobile(width < 500)
+      }
+  }, [])
+  useEffect(() => {
+    if (!navigator.onLine) notFound()
+    const queryWidth = window.matchMedia("(max-width: 500px)")
+    const updateQuery = (e)=> setIsmobile(e.matches)
+    window.addEventListener("resize", handleResize)
+    queryWidth.addEventListener("change",updateQuery)
+    handleResize()
+    updateQuery(queryWidth)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [handleResize])
+  return (
+    <ResponsiveContext.Provider
+      value={{
+        appBarType: getHeader.appBarType,
+        appBar: getHeader,
+        renderAppBarMobile,
+        renderHeader,
+        setAppBar,
+        clearScreen,
+        handleBack,
+        setScreen,
+        screen,
+        setSearch,
+        showReset: getHeader.showReset,
+        handleAction,
+        setGlobalPadding,
+        search,
+        componentBackType: getHeader?.componentBackType,
+        shadow: getHeader.shadow,
+      }}
+    >
+      {!getHeader.hideHeader&&<HeaderContainer />}
+      {DefaultScreen({
+        type: getHeader.defaultType,
+        setAppBar: setAppBar,
+        setScreen: setScreen,
+        setSearch: setSearch,
+      }) ? (
+        <div
+          style={{ marginTop: `${headerHeight}px` }}
+          className={`w-full ${getGlobalPadding ? "max-w-7xl mx-auto" : ""}`}
+        >
+          {DefaultScreen({
+            type: getHeader.defaultType,
+            setAppBar: setAppBar,
+            setScreen: setScreen,
+            setSearch: setSearch,
+          })}
+        </div>
+      ) : (
+        children
+      )}
+      {getHeader.bottomTabNavigation&&isMobile ? (
+        <BottomTabNavigation data={getHeader.dataBottomTabNavigation} />
+      ) : (
+        ""
+      )}
+      {isMobile == null ? <></> : isMobile ? <></> : !getHeader.hideFooter?<FooterContainer />:''}
+    </ResponsiveContext.Provider>
+  )
+}
+
+export default ResponsiveProvider
+
+export const useHeader = () => useContext(ResponsiveContext)

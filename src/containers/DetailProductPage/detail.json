@@ -1,0 +1,71 @@
+{
+    "ID": "dbe9ec89-5a8f-47e9-8668-19f567a22a28",
+    "Images": [
+      "https://www.youtube.com/watch?v=gNS0bKOP2jM",
+      "https://azlogistik.s3.ap-southeast-3.amazonaws.com/file-1730460295472.webp",
+      "https://azlogistik.s3.ap-southeast-3.amazonaws.com/file-1730460295472.webp"
+    ],
+    "SoldCount": 0,
+    "ReviewCount": 0,
+    "Rating": 0,
+    "Pricing": {
+      "Price": 10000,
+      "OriginalPrice": 10000,
+      "DiscountPercentage": 0
+    },
+    "Bonus": [
+      "Garansi 1 Tahun"
+    ],
+    "ProductInfo": {
+      "Title": "Kabel Jumper Universal",
+      "Condition": "baru",
+      "Grade": "original",
+      "GradeDescription": "original",
+      "Etalase": "aki",
+      "MinOrder": 1
+    },
+    "Variants": {
+      "variant_1_name": "Tipe",
+      "variant_1_value": [
+        "ADV"
+      ],
+      "variant_2_name": "Panjang",
+      "variant_2_value": [
+        "1M",
+        "2M"
+      ],
+      "Combinations": [
+        {
+          "position": 1,
+          "code": "ADV-1M",
+          "stock": 99,
+          "price": 10000
+        },
+        {
+          "position": 2,
+          "code": "ADV-2M",
+          "stock": 99,
+          "price": 180000
+        }
+      ]
+    },
+    "ProductType": "Satuan/Ecer",
+    "Stock": "198",
+    "Description": "Kabel Jumper Aki Top ADV",
+    "sellerInfo": {
+      "LastOnline": "2 jam yang lalu",
+      "Rating": 4,
+      "ReviewCount": 1200,
+      "Location": "Kota Surabaya",
+      "Insurance": "Opsional",
+      "operationalHours": {
+        "monday": "08:00 - 17:00 WIB",
+        "tuesday": "08:00 - 17:00 WIB",
+        "wednesday": "08:00 - 17:00 WIB",
+        "thursday": "08:00 - 17:00 WIB",
+        "friday": "08:00 - 17:00 WIB",
+        "saturday": "08:00 - 17:00 WIB",
+        "sunday": "Closed"
+      }
+    }
+  }

@@ -1,0 +1,70 @@
+import ProductComponent from '@/components/ProductComponent/ProductComponent';
+import { ProductCard } from '../Beranda/Product/ProductSlider';
+import ProductComponentSkeleton from '@/components/ProductComponent/ProductComponentSkeleton';
+import { useTranslation } from '@/services/languageTranslate';
+
+// LBM - OLIVER - PASSING STATE LOADING UNTUK SKELETON - MP - 020
+const ProductGrid = ({ products, sellerProfile, isLoading }) => {
+  const {t} = useTranslation()
+  return (
+    <div 
+      className="grid gap-3 w-[914px]"
+      style={{
+        gridTemplateColumns: 'repeat(5, 170px)', // 5 columns of 170px each
+      }}
+    >
+      {/* LBM - OLIVER - PASSING STATE LOADING UNTUK SKELETON - MP - 020 */}
+      {isLoading ? (
+        Array(10).fill('').map(() => <ProductComponentSkeleton />)
+      ) : products.map((product, index) => (
+        <div 
+          key={`etalase-product-${index}`} 
+          className="flex"  // This ensures the card stretches within its grid cell
+        >
+          {/* <ProductCard
+            // DARI PRODUK
+            id={product.id}
+            imageSrc={product.imageSrc}
+            isGrosir={product.isGrosir}
+            stock={product.stock}
+            grade={product.grade}
+            name={product.title}
+            originalPrice={product.originalPrice}
+            discount={product.discount}
+            discountedPrice={product.discountedPrice}
+            sales={product.sales}
+
+            // DARI SELLER
+            storeName={sellerProfile.name}
+            location={sellerProfile.location}
+            className="flex-1" // This ensures the card takes full height of its container
+          /> */}
+          {/* FIX BUG Profil Seller Sisi Buyer LB-0020 */}
+          {/* FIX BUG Profil Seller Sisi Buyer LB-0049 */}
+          {/* FIX BUG Pengecekan Ronda Muatparts LB-0257 */}
+          {/* FIX BUG Pengecekan Ronda Muatparts LB-0258 */}
+          {/* FIX BUG Pengecekan Ronda Muatparts LB-0304 */}
+          {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0529 */}
+          <ProductComponent
+            ID={product.id}
+            Photo={product.imageSrc}
+            SalesType={product.isGrosir ? t("LabelproductCardGrosir") : ""}
+            Stock={product.stock}
+            Grade={product.grade}
+            Name={product.title}
+            PriceBeforeDiscount={product.originalPrice}
+            PriceAfterDiscount={product.discountedPrice}
+            Discount={product.discount}
+            Store={sellerProfile?.name}
+            City={sellerProfile?.location}
+            Rating={product.rating}
+            SoldCount={product.sales}
+            Wishlist={product.isWishlisted}
+          />
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default ProductGrid;

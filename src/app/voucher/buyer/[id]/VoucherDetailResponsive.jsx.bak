@@ -1,0 +1,174 @@
+"use client";
+
+import React, { useEffect, useMemo } from "react";
+import VoucherDetailHeader from "@/components/VoucherMobile/VoucherDetailHeader";
+import { useHeader } from '@/common/ResponsiveContext'
+import { formatCurrency } from "@/utils/currency";
+import { dateFormatter } from "@/utils/date";
+import SWRHandler from "@/services/useSWRHook";
+import { useParams } from "next/navigation";
+import toast from "@/store/toast";
+
+// LBM
+
+const VoucherDetail = () => {
+
+	const params = useParams();
+
+	const { useSWRHook } = new SWRHandler();
+
+	const DETAIL_VOUCHER_BUYER = `v1/muatparts/voucher/voucher-detail/${params.id}`;
+
+	const { setShowBottomsheet } = toast();
+
+	const { 
+		data,
+		error,
+		isLoading
+	} = useSWRHook(DETAIL_VOUCHER_BUYER);
+	
+	const {
+		setAppBar, // tambahkan payload seperti ini setAppBar({onBack:()=>setScreen('namaScreen'),title:'Title header',appBarType:'type'})
+	}=useHeader()
+
+    useEffect(() => {
+		setAppBar({
+			title:'Detail Voucher',
+			appBarType:'header_title',
+			renderActionButton: "",
+			bottomTabNavigation:true
+		})
+		{/* 24.THP 2-MOD001-MP-024 QC PLAN-WEB-MUATPARTS VOUCHER BUYER LB 0019, LB 0037 */}
+		setShowBottomsheet(false);
+	}, []);
+
+	const usagePercent = (voucher) => {
+		const max = voucher.usageQuota;
+		const used = voucher.usageCount;
+		const percent = (used / max) * 100;
+
+		return percent;
+	};
+
+	const Terms = ({voucher}) => {
+
+		const discountValue =
+			voucher?.discountType === "Persentase"
+				? `${new Intl.NumberFormat("id-ID").format(
+						voucher.discountValue
+					)}%`
+				: `${formatCurrency(voucher?.discountValue, true)}`;
+
+		// 24.THP 2-MOD001-MP-024 QC PLAN-WEB-MUATPARTS VOUCHER BUYER LB 0034
+
+		const tnc = [
+			`Dapatkan diskon ${discountValue} ${voucher.discountMax != '0.00' ? `
+				sampai dengan ${formatCurrency(voucher?.discountMax,true)}	
+			` : ``}`,
+
+			"Berlaku hanya di Toko",
+			`Minimum belanja ${formatCurrency(
+				voucher?.transactionMin,
+				true
+			)} untuk menggunakan voucher ini`,
+			`1 voucher berlaku untuk ${voucher?.user_limit} kali transaksi selama periode voucher`,
+			`Voucher tidak dapat digunakan selain di toko ${voucher?.store_name}`,
+			"⁠Voucher berlaku di Muatparts",
+		];
+
+		return (
+			<div className="flex flex-col gap-2 mt-4">
+				<div className="flex gap-2 items-start">
+					<label className="text-[14px] leading-[16.8px]">1.</label>
+					<label
+						className="text-[14px] leading-[16.8px]"
+						
+					>
+						Untuk menggunakan voucher ini, pengguna
+						wajib sudah menghubungkan akun GoPay melalui
+						<a
+							href="https://www.tokopedia.com/gopay"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-neutral-900 underline"
+						>
+							{" "}
+							halaman ini
+						</a>
+					</label>
+				</div>
+				{
+					tnc.map((item, index) => (
+						<div className="flex gap-2 items-start">
+							<label className="text-[14px] leading-[16.8px]">{index + 2}.</label>
+							<label key={index} className="text-[14px] leading-[16.8px]">
+								{item}
+							</label>
+						</div>
+					))
+				}
+			</div>
+		)
+	};
+
+	const VoucherInfo = ({voucher}) => {
+
+		return (
+			<>
+				{
+					usagePercent > 0 && (
+						<>
+							<div className="bg-neutral-200 w-full h-[10px] rounded-full overflow-hidden py-[2px] px-0.5">
+								<div
+									className="bg-primary-700 h-full rounded-full"
+									style={{ width: `${usagePercent(voucher)}%` }}
+								/>
+							</div>
+							<label className="text-[10px] font-medium text-neutral-900 mb-3">Kuota Voucher Telah Terpakai {usagePercent(voucher)}%</label>
+						</>
+					)
+				}
+				<div className="flex flex-col gap-3 pb-4 border-b-[1px] border-neutral-400">
+					<div className="flex justify-between items-center">
+						<div className="flex gap-2 items-center">
+							<label className="medium-xs text-neutral-700">Berlaku hingga</label>
+						</div>
+						<label className="semi-xs text-neutral-900">{dateFormatter(voucher?.startDate, "dd MMMM yyyy")} - {dateFormatter(voucher?.expiredAt, "dd MMMM yyyy")}</label>
+					</div>
+					<div className="flex justify-between items-center">
+						<div className="flex gap-2 items-center">
+							<label className="medium-xs text-neutral-700">Minimum Transaksi</label>
+						</div>
+						<label className="semi-xs text-neutral-900">{formatCurrency(voucher?.transactionMin, true)}</label>
+					</div>
+				</div>
+			</>
+		)
+	}
+
+	if(data?.Data?.[0])
+	{
+		return (
+			// LBM
+			<div className="bg-[#f8f8f8] h-[calc(100vh-88px)]">
+				<div className="flex flex-col gap-5 pb-32">
+					<div className="bg-primary-800 flex justify-center">
+						<VoucherDetailHeader voucher={data?.Data?.[0]}/>
+					</div>
+					<div className="px-4">
+						<VoucherInfo voucher={data?.Data?.[0]}/>
+						<div className="p-[10px]">
+							<label className="semi-sm text-neutral-900">Syarat Dan Ketentuan</label>
+							<Terms voucher={data?.Data?.[0]}/>
+						</div>
+					</div>
+				</div>
+			</div>
+		)
+	}
+
+	return <></>
+
+}
+
+export default VoucherDetail;

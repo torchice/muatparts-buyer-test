@@ -1,0 +1,150 @@
+"use client";
+// Improvement Trigger Multibahasa
+import { useEffect, useRef, useState } from "react";
+import IconComponent from "../IconComponent/IconComponent";
+import SWRHandler from "@/services/useSWRHook";
+import bahasaZus from "@/store/zustand/bahasa";
+import Image from "next/image";
+import { Loader2 } from "lucide-react";
+
+export default function DropdownMultibahasa({ className }) {
+  const { useSWRHook } = SWRHandler();
+  const { data, isLoading } = useSWRHook(
+    `v1/bo/language/list?supermenuid=6&role=5`
+  );
+
+  const dropdownRef = useRef(null);
+  const languageListRef = useRef(null);
+
+  const [selectedLang, setSelectedLang] = useState("id");
+  const [langs, setLangs] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleSelectLanguage = (lang) => {
+    console.log("yoo");
+    window.localStorage.setItem("lang", lang.code);
+    window.location.reload();
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target) &&
+        languageListRef.current &&
+        !languageListRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (data) {
+      setLangs(data.Data);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const langStorage = window.localStorage.getItem("lang");
+      setSelectedLang(langStorage);
+    }
+  }, []);
+
+  return (
+    <div className={`relative ${className}`}>
+      <button
+        ref={dropdownRef}
+        onClick={() => {
+          setIsOpen(!isOpen);
+        }}
+        className={
+          "flex items-center justify-center text-white font-semibold text-xs gap-1"
+        }
+      >
+        {langs?.length > 0 ? (
+          langs
+            .filter((lang) => lang.code === selectedLang)
+            .map((lang) => (
+              <>
+                <Image
+                  alt="Language Flag"
+                  src={lang.image}
+                  width={1000}
+                  height={1000}
+                  className="shrink-0 w-6 h-4"
+                />
+                <p>{lang.locale}</p>
+              </>
+            ))
+        ) : (
+          <>
+            {selectedLang === "id"
+              ? "Indonesian"
+              : selectedLang === "en"
+              ? "English"
+              : "Chinese"}
+          </>
+        )}
+        <svg
+          viewBox="0 0 24 25"
+          fill="currentFill"
+          stroke="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+          className="text-white size-5 fill-none mb-1"
+        >
+          <path
+            d="M6 10L11.1807 15.6035C11.4168 15.8575 11.7363 16 12.0693 16C12.4023 16 12.7218 15.8575 12.958 15.6035L18 10.15"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="bevel"
+          />
+        </svg>
+      </button>
+      {isOpen && (
+        <div
+          ref={languageListRef}
+          className="absolute top-full left-0 flex flex-col items-start bg-white shadow-md rounded-md text-xs font-medium min-w-[216px] z-50"
+        >
+          {!isLoading ? (
+            langs.map((lang, index) => (
+              <div
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSelectLanguage(lang);
+                }}
+                key={`language-${index}`}
+                className="flex items-center justify-between w-full px-[10px] py-2 hover:cursor-pointer hover:bg-black/5"
+              >
+                <div className="flex items-center gap-2">
+                  {/* <div className="rounded-[4px] w-6 h-4 bg-gray-300 skeleton animate-skeleton" /> */}
+                  <Image
+                    alt="Language Flag"
+                    src={lang.image}
+                    width={1000}
+                    height={1000}
+                    className="shrink-0 w-6 h-4"
+                  />
+                  <div className="leading-[10px] font-semibold">
+                    {lang.locale}({lang.code.toUpperCase()})
+                  </div>
+                </div>
+                {selectedLang === lang.code && (
+                  <IconComponent src={`/icons/check-circle.svg`} />
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="p-2 flex w-full items-center justify-center">
+              <Loader2 className="animate-spin text-primary-500" />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

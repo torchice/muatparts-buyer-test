@@ -1,0 +1,629 @@
+
+'use client';
+import { startTransition, useEffect, useState } from 'react';
+import IconComponent from '@/components/IconComponent/IconComponent';
+import Dropdown from '@/components/Dropdown/Dropdown';
+import Checkbox from '@/components/Checkbox/Checkbox';
+import Button from '@/components/Button/Button';
+import { userLocationZustan } from '@/store/manageLocation/managementLocationZustand';
+import { useLanguage } from '@/context/LanguageContext';
+import DropdownBrandKendaraan from '../HomePage/PilihKendaraan/DropdownBrandKendaraan';
+import DropdownTahunKendaraan from '../HomePage/PilihKendaraan/DropdownTahunKendaraan';
+import DropdownLazyLoad from '@/components/Dropdown/DropdownLazyLoad';
+/* IMPROVEMENT FILTER ON PRODUCTS & HOMEPAGE */
+function FilterProductsWeb({
+    menu,
+    garasiList,
+    getFilterProduct,
+    brandOptions,
+    yearOptions,
+    modelOptions,
+    typeOptions,
+    getListFilter,
+    getMatchFilter,
+    setMatchFilter,
+    
+    // lazyload
+    handleBrandLoadMore,
+    handleYearLoadMore,
+    handleTypeLoadMore,
+    handleModelLoadMore,
+
+    isBrandHasMore,
+    isModelHasMore,
+    isTypeHasMore,
+    isYearHasMore,}) {
+    const { t } = useLanguage();
+    const [getExpanded, setExpanded] = useState(['Kendaraan','Garasi','Jarak','Lokasi','PenjualTerakhirAktif','Brand','Rating','Kategori',  'JenisPenjualan','Promo','JenisProduk','Pengiriman'])
+    const {selectedLocation}=userLocationZustan()
+    function handleExpanded(id) {
+        if (getExpanded.some(val => val === id)) {
+            let tmp = getExpanded.filter(val => val !== id);
+            setExpanded(tmp);
+        } else {
+            setExpanded(prev => [...prev, id]);
+        }
+    }
+    const filterHandler = {
+        get(target, prop) {
+            return prop in target ? target[prop] : undefined
+        },
+        set(target, prop, value) {
+            console.log(`Updating filter: ${prop} -> ${JSON.stringify(value)}`)
+            target[prop] = value
+            return true
+        }
+    }
+    // tak buat proxy soale tipene gak ke kontrol,🙏🏻
+    const proxyGetFilterProduct = new Proxy(getFilterProduct, filterHandler)
+
+    function handleCheck(field, val, name) {
+        let vechicle_cas = ['brandID', 'year', 'modelID', 'typeID']
+        let tmp = proxyGetFilterProduct[field]
+        let value = !isNaN(Number(val)) ? Number(val) : val
+        if (Array.isArray(tmp) && tmp.some(a => a === value)) {
+            console.log('tmpArrayFirstIn', tmp)
+            setMatchFilter(getMatchFilter?.filter(a => a?.id != value))
+            proxyGetFilterProduct.setFilterProduct(field, tmp.filter(a => a != value))
+        } 
+        else if (Array.isArray(tmp) && !tmp.some(a => a === value)) {
+            console.log('tmpArrayAlreadyIn', tmp)
+            setMatchFilter(a => [...a, { id: value, value: name ?? value, field }])
+            proxyGetFilterProduct.setFilterProduct(field, [...tmp, value])
+        } 
+        else if (typeof tmp === "string" || typeof tmp === "number") {
+            if(vechicle_cas.some(a=>a===field)){
+                if(getMatchFilter.some(a=>a?.field===field) && getMatchFilter.some(a=>a?.id.toString()===val)){
+                    let new_vehicle_cas = vechicle_cas
+                    let tmp_match = getMatchFilter
+                    let baseIndex = new_vehicle_cas.indexOf(field)
+                    let slicing_data = new_vehicle_cas.slice(baseIndex,new_vehicle_cas.length)
+                    setMatchFilter(tmp_match.map(a=>{
+                        if(slicing_data.includes(a?.field)) return null
+                        return a
+                       })?.filter(a=>a!=null))
+                    slicing_data.map(s=>{
+                        proxyGetFilterProduct.setFilterProduct(s, '')
+                    })
+                }else{
+                    let tmp = getMatchFilter?.filter(a => a?.field != field && a?.id?.toString() !=val)
+                    let result = [...tmp,{field,id:value,value:name}]
+                    let new_vehicle_cas = vechicle_cas
+                    let baseIndex = new_vehicle_cas.indexOf(field)
+                    let slicing_data = new_vehicle_cas.slice(baseIndex+1, new_vehicle_cas.length)
+                
+                    // setMatchFilter(result)
+                    setMatchFilter(tmp.map(a=>{
+                        if(slicing_data.includes(a?.field)) return null
+                        return a
+                       })?.filter(a=>a!=null))
+                    slicing_data.map(s=>{
+                        proxyGetFilterProduct.setFilterProduct(s,'')
+                    })
+                    proxyGetFilterProduct.setFilterProduct(field, value)
+                }
+                return
+            }
+            if (tmp === value) {
+                setMatchFilter(getMatchFilter?.filter(a => a?.id != value))
+                proxyGetFilterProduct.setFilterProduct(field, typeof tmp === "number" ? 0 : "")
+            } else {
+                setMatchFilter(prev =>
+                    [
+                      ...prev.filter(item => item.field !== field),
+                      { id: value, value: name ?? value, field }
+                    ]
+                  );
+                proxyGetFilterProduct.setFilterProduct(field, value)
+            }
+        }
+    }
+
+    useEffect(()=>{
+        console.log(getMatchFilter)
+    },[getMatchFilter])
+
+    // const [filter, setFilter] = useState({
+    //     brand: {
+    //         value: getFilterProduct?.['brandID'],
+    //         name: "",
+    //       },
+    //       year: {
+    //         value: getFilterProduct?.['year'],
+    //         name: "",
+    //       },
+    //       model: {
+    //         value: getFilterProduct?.['modelID'],
+    //         name: "",
+    //       },
+    //       type: {
+    //         value: getFilterProduct?.['typeID'],
+    //         name: "",
+    //       },
+    // })
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0933
+    const errorMessages = {
+        vehicleID:t("LabeldropdownFilterKendaraanPilihJenisKendaraanterlebihdahulu"),
+        brandID: t("LabeldropdownFilterKendaraanPilihBrandterlebihdahulu"),
+        year: t("LabeldropdownFilterKendaraanPilihTahunterlebihdahulu"),
+        modelID: t("LabeldropdownFilterKendaraanPilihModelterlebihdahulu"),
+        typeID: t("LabeldropdownFilterKendaraanPilihModelterlebihdahulu"),
+    };
+    const getFirstEmptyFieldBefore = (currentField) => {
+        const fieldOrder = ["brandID", "year", "modelID", "type"];
+
+        const currentIndex = fieldOrder.indexOf(currentField);
+        if (currentIndex <= 0) return null;
+
+        for (let i = 0; i < currentIndex; i++) {
+            const field = fieldOrder[i];
+            if (getFilterProduct?.[field]===0||getFilterProduct?.[field]==='') {
+                return field;
+            }
+        }
+        return null;
+    };
+
+    const handleDropdownClick = (field) => {
+        const firstEmpty = getFirstEmptyFieldBefore(field);
+
+        if (firstEmpty) {
+            setIsErrorMessage({
+                field,
+                message: errorMessages[firstEmpty] ||`${firstEmpty} must be filled`,
+            });
+        } else {
+            setIsErrorMessage({
+                field: "",
+                message: "",
+            });
+        }
+    };
+    const [isErrorMessage, setIsErrorMessage] = useState({
+        field:'',
+        message:''
+    })
+    // const [isYearError, setIsYearError] = useState(false)
+    // const [isModelError, setIsModelError] = useState(false)
+    // const [isTypeError, setIsTypeError] = useState(false)
+    // const handleClickYear=()=>{(getFilterProduct?.['brandID']===''||getFilterProduct?.['brandID']===0)&&setIsErrorMessage({field:'year',message:"Pilih brand terlebih dahulu"})}
+    // const handleClickModel=()=>{(getFilterProduct?.['year']===''||getFilterProduct?.['year']===0)&&setIsErrorMessage({field:'model',message:"Pilih tahun terlebih dahulu"})}
+    // const handleClickType=()=>{(getFilterProduct?.['modelID']===""||getFilterProduct?.['modelID']===0)&&setIsErrorMessage({field:'type',message:"Pilih model terlebih dahulu"})}
+
+    useEffect(()=>{
+
+        !(getFilterProduct?.['brandID']===''||getFilterProduct?.['brandID']===0)&&setIsErrorMessage({field:"",message:""});
+        !(getFilterProduct?.['year']===''||getFilterProduct?.['year']===0)&&setIsErrorMessage({field:"",message:""});
+        !(getFilterProduct?.['modelID']===''||getFilterProduct?.['modelID']===0)&&setIsErrorMessage({field:"",message:""});
+        
+    },[getFilterProduct])
+
+  
+    return (
+        <div className="flex flex-col bg-neutral-50 border border-neutral-400 rounded-md p-4 gap-4 w-[264px] h-fit">
+            <span className="text-xl text-[#2c2b2b] font-bold">Filter</span>
+            <div className="flex flex-col gap-4 w-full divide-y divide-neutral-400">
+                {/* garasi */}
+                <div className="flex flex-col w-full gap-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('Garasi')}
+                    >
+                        {/* 25. 11 - QC Plan - Web - Ronda Live Mei - LB - 0066 */}
+                        <span className="text-xs text-neutral-900 font-semibold">{t("LabelfilterProdukGarasisaya")}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'Garasi')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'Garasi') ? '400px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'Garasi')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4 overflow-y-auto"
+                    >
+                        <Dropdown defaultValue={garasiList?.filter(val=>val?.value===getFilterProduct?.['garageID'])} options={garasiList} placeholder={t("LabelfilterProdukKendaraansaya")} classname={'!w-full'} id={'kendaraanID'} onSelected={a=>handleCheck('garageID',a?.[0]?.value,a?.[0]?.name)} />
+                        <span onClick={()=>{
+                            getFilterProduct?.setFilterProduct('garageID','')
+                            setMatchFilter(getMatchFilter?.filter(a=>a?.field!=='garageID'))
+                        }} className='font-medium text-xs text-primary-700 select-none cursor-pointer'>{t("LabelfilterProdukResetfilterGarasi")}</span>
+                    </div>
+                </div>
+                {/* kendaraan */}
+                <div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('Kendaraan')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t('LabelfilterProdukJenisKendaraan')}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'Kendaraan')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'Kendaraan') ? '300px' : '0px',
+                            overflow:  !getExpanded.some(a => a === 'Kendaraan')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4 "
+                    >
+                        <div className="grid grid-cols-2 gap-2 w-full">
+                            <Dropdown minWidth classname="!w-full" defaultValue={brandOptions?.filter(val=>val?.value===getFilterProduct?.['brandID'])} placeholder={t("LabelfilterProdukBrand")} options={brandOptions} onSelected={a=>handleCheck('brandID',a?.[0]?.value,a?.[0]?.name)} />
+                           <div className="flex flex-col flex-shrink !w-auto">
+                                <Dropdown minWidth position={'right'}  classname="!w-full" onClick={()=>{handleDropdownClick('year')}} isError={isErrorMessage.field==='year'} defaultValue={yearOptions?.filter(val=>val?.value==getFilterProduct?.['year'])} placeholder={t("LabelfilterProdukTahun")} options={yearOptions} onSelected={a=>handleCheck('year',a?.[0]?.value,a?.[0]?.name)}/>
+                                {isErrorMessage.field==='year' && <p className="mt-1 text-red-500 text-xs font-semibodl">{isErrorMessage.message}</p>}
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="flex flex-col">
+                                <Dropdown minWidth classname="!w-full" onClick={()=>{handleDropdownClick('modelID')}} isError={isErrorMessage.field==='modelID'}  defaultValue={modelOptions?.filter(val=>val?.value===getFilterProduct?.['modelID'])} placeholder={t("LabelfilterProdukModel")} options={modelOptions} onSelected={a=>handleCheck('modelID',a?.[0]?.value,a?.[0]?.name)}/>
+                                {isErrorMessage.field==='modelID'  && <p className="mt-1 text-red-500 text-xs font-semibodl">{isErrorMessage.message}</p>}
+                                    
+                            </div>
+                            <div className="flex flex-col">
+                                <Dropdown minWidth position={'right'} classname="!w-full grow-0" onClick={()=>{handleDropdownClick('type')}} isError={isErrorMessage.field==='type'} defaultValue={typeOptions?.filter(val=>val?.value===getFilterProduct?.['typeID'])} placeholder={t("LabelfilterProdukTipe")} options={typeOptions} onSelected={a=>handleCheck('typeID',a?.[0]?.value,a?.[0]?.name)}/>
+                                {isErrorMessage.field==='type' && <p className="mt-1 text-red-500 text-xs font-semibodl">{isErrorMessage.message}</p>}
+                            </div>
+                        </div>
+                        
+                        {/* <div className="flex gap-2">
+                            <DropdownLazyLoad isLazyLoad onLoadMore={()=>{handleBrandLoadMore()}} isNextAvailable={isBrandHasMore} defaultValue={brandOptions?.filter(val=>val?.value===getFilterProduct?.['brandID'])} placeholder="Brand" options={brandOptions} onSelected={a=>handleCheck('brandID',a?.[0]?.value,a?.[0]?.name)} />
+                            <DropdownLazyLoad isLazyLoad onLoadMore={()=>{handleYearLoadMore()}} isNextAvailable={isYearHasMore} defaultValue={yearOptions?.filter(val=>val?.value==getFilterProduct?.['year'])} placeholder="Tahun" options={yearOptions} onSelected={a=>handleCheck('year',a?.[0]?.value,a?.[0]?.name)}/>
+                        </div>
+                        <div className="flex gap-2">
+                            <DropdownLazyLoad isLazyLoad onLoadMore={()=>{handleModelLoadMore()}} isNextAvailable={isModelHasMore} defaultValue={modelOptions?.filter(val=>val?.value===getFilterProduct?.['modelID'])} placeholder="Model" options={modelOptions} onSelected={a=>handleCheck('modelID',a?.[0]?.value,a?.[0]?.name)}/>
+                            <DropdownLazyLoad isLazyLoad onLoadMore={()=>{handleTypeLoadMore()}} isNextAvailable={isTypeHasMore} defaultValue={typeOptions?.filter(val=>val?.value===getFilterProduct?.['typeID'])} placeholder="Tipe" options={typeOptions} onSelected={a=>handleCheck('typeID',a?.[0]?.value,a?.[0]?.name)}/>
+                        </div> */}
+                        
+                        <span onClick={()=>{
+                            getFilterProduct?.setFilterProduct('brandID',"")
+                            getFilterProduct?.setFilterProduct('year',"")
+                            getFilterProduct?.setFilterProduct('modelID',"")
+                            getFilterProduct?.setFilterProduct('typeID',"")
+                            setIsErrorMessage({field:'',message:""})
+                            setMatchFilter(getMatchFilter?.filter(a=>a?.field==='brandID'&&a?.field==='year'&&a?.field==='modelID'&&a?.field==='typeID'))
+                        }} className='font-medium text-xs text-primary-700 select-none cursor-pointer'>{`Reset filter ${t('LabelfilterProdukJenisKendaraan')}`}</span>
+                    </div>
+                </div>
+                {/* Jarak */}
+                <div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('Jarak')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t('LabelfilterProdukJarak')}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'Jarak')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'Jarak') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'Jarak')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4"
+                    >
+                        <Checkbox  value={5} onChange={a=>{
+                                handleCheck('radius',a?.value,'Radius 5 km')
+                                if(a?.checked) getFilterProduct?.setFilterProduct('latitude',selectedLocation?.Latitude?selectedLocation?.Latitude:-7.2575)
+                                else getFilterProduct?.setFilterProduct('latitude',0)
+                                if(a?.checked) getFilterProduct?.setFilterProduct('longitude',selectedLocation?.Longitude?selectedLocation?.Longitude:112.7521)
+                                else getFilterProduct?.setFilterProduct('longitude',0)
+                            }} 
+                            checked={getFilterProduct?.radius==5}
+                            classname={'text-xs font-medium text-neutral-900'} 
+                            label='Radius 5 km' />
+                        <Checkbox  value={10} onChange={a=>{
+                                handleCheck('radius',a?.value,'Radius 10 km')
+                                if(a?.checked) getFilterProduct?.setFilterProduct('latitude',selectedLocation?.Latitude?selectedLocation?.Latitude:-7.2575)
+                                else getFilterProduct?.setFilterProduct('latitude',0)
+                                if(a?.checked) getFilterProduct?.setFilterProduct('longitude',selectedLocation?.Longitude?selectedLocation?.Longitude:112.7521)
+                                else getFilterProduct?.setFilterProduct('longitude',0)
+                            }} 
+                            checked={getFilterProduct?.radius==10}
+                            classname={'text-xs font-medium text-neutral-900'} 
+                            label='Radius 10 km' />
+                        <Checkbox  value={20} onChange={a=>{
+                                handleCheck('radius',a?.value,'Radius 20 km')
+                                if(a?.checked) getFilterProduct?.setFilterProduct('latitude',selectedLocation?.Latitude?selectedLocation?.Latitude:-7.2575)
+                                else getFilterProduct?.setFilterProduct('latitude',0)
+                                if(a?.checked) getFilterProduct?.setFilterProduct('longitude',selectedLocation?.Longitude?selectedLocation?.Longitude:112.7521)
+                                else getFilterProduct?.setFilterProduct('longitude',0)
+                            }} 
+                            checked={getFilterProduct?.radius==20}
+                            classname={'text-xs font-medium text-neutral-900'} 
+                            label='Radius 20 km' 
+                        />
+                    </div>
+                </div>
+                {/* Lokasi */}
+                {!!(getListFilter?.cities?.length)&&<div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('Lokasi')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t('LabelfilterProdukLokasi')}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'Lokasi')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'Lokasi') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'Lokasi')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4 overflow-y-auto"
+                    >
+                        {getListFilter?.cities?.map((val,i)=><Checkbox checked={getFilterProduct?.cityID?.length?getFilterProduct?.cityID?.some(a=>a==val?.id):false} value={val?.value} onChange={()=>handleCheck('cityID',val?.id,val?.value)} classname={'text-xs font-medium text-neutral-900'} label={val?.value} key={i} />)}
+                        {/* <span onClick={()=>{}} className='font-medium text-xs text-primary-700 select-none cursor-pointer'>Lihat Selengkapnya</span> */}
+                    </div>
+                </div>}
+                {/* Pengiriman */}
+                {(menu==='produk'&&getListFilter?.shippingOption?.length>0)&&<div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('Pengiriman')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t('LabelfilterProdukPengiriman')}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'Pengiriman')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'Pengiriman') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'Pengiriman')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4 overflow-y-auto"
+                    >
+                        {
+                            getListFilter?.shippingOption?.map(val=><Checkbox key={val?.id} checked={getFilterProduct?.['shippingType']?.includes(val?.id)} classname={'text-xs font-medium text-neutral-900'} label={val?.value} onChange={()=>handleCheck('shippingType',val?.id,val?.value)} />)
+                        }
+                        
+                        
+                    </div>
+                </div>}
+                {/* Penjual Terakhir Aktif */}
+                {/* <div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('PenjualTerakhirAktif')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">Penjual Terakhir Aktif</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'PenjualTerakhirAktif')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'PenjualTerakhirAktif') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'PenjualTerakhirAktif')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4"
+                    >
+                        <Checkbox classname={'text-xs font-medium text-neutral-900'} label='Sedang Aktif' />
+                        <Checkbox classname={'text-xs font-medium text-neutral-900'} label='Paling lama 1 jam yang lalu' />
+                        <Checkbox classname={'text-xs font-medium text-neutral-900'} label='Paling lama 1 hari yang lalu' />
+                    </div>
+                </div> */}
+                {/* Kategori */}
+                {(menu==='produk'&&!!(getListFilter?.categories?.length))&&<div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('Kategori')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t('LabelfilterProdukKategori')}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'Kategori')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'Kategori') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'Kategori')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4 overflow-y-auto"
+                    >
+                        {getListFilter?.categories?.map((val,i)=><div key={i} className='flex flex-col gap-2 select-none cursor-pointer' onClick={()=>{
+                                if(val?.children?.length) handleExpanded(val?.id)
+                                else handleCheck('subcategoryID',val?.id,val?.value)
+                            }}>
+                            <div className='flex gap-2 items-center'>
+                                {!!(val?.children?.length)&&<IconComponent src={getExpanded.some(a => a === val?.id)?'/icons/chevron-up.svg':'/icons/chevron-down.svg'} />}
+                                <span className='text-xs font-medium text-neutral-900'>{val?.value}</span>
+                            </div>
+                            {!!(val?.children?.length)&&<div
+                                style={{
+                                    maxHeight: getExpanded.some(a => a === val?.id) ? '300px' : '0px',
+                                    overflow: !getExpanded.some(a => a === val?.id)?'hidden':'',
+                                }}
+                                className="transition-all duration-300 ease-in-out flex flex-col gap-4 ml-6 overflow-y-auto"
+                            >
+                                {
+                                    val?.children?.map((item,i)=><span onClick={()=>{
+                                        handleCheck('subcategoryID',val?.id,val?.value)
+                                        handleCheck('itemID',item?.id,val?.value)
+                                    }} key={i} className='text-xs font-medium text-neutral-900'>{item?.value}</span>)
+                                }
+                            </div>}
+                            
+                        </div>)}
+                    </div>
+                </div>}
+                {/* Brand */}
+                {!!(getListFilter?.brands?.length)&&<div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('Brand')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t("LabelfilterProdukBrand")}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'Brand')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'Brand') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'Brand')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4 overflow-y-auto"
+                    >
+                        {getListFilter?.brands?.map((val,i)=><Checkbox checked={getFilterProduct?.brandProductID?.length?getFilterProduct?.brandProductID?.some(a=>a===val?.id):false} value={val?.value} onChange={()=>handleCheck('brandProductID',val?.id,val?.value)} classname={'text-xs font-medium text-neutral-900'} label={val?.value} key={i} />)}
+                        {/* <span onClick={()=>{}} className='font-medium text-xs text-primary-700 select-none cursor-pointer'>Lihat Selengkapnya</span> */}
+                    </div>
+                </div>}
+                {/* Jenis Penjualan */}
+                {menu==='produk'&&<div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('JenisPenjualan')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t('LabelfilterProdukJenisPenjualan')}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'JenisPenjualan')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'JenisPenjualan') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'JenisPenjualan')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4"
+                    >
+                        <Checkbox checked={getFilterProduct?.salesType?.length?getFilterProduct?.salesType?.some(a=>a==="Satuan/Ecer"):false} onChange={()=>handleCheck('salesType',"Satuan/Ecer","Satuan/Ecer")} classname={'text-xs font-medium text-neutral-900'} label='Satuan/Ecer' />
+                        <Checkbox checked={getFilterProduct?.salesType?.length?getFilterProduct?.salesType?.some(a=>a==="Grosir"):false} onChange={()=>handleCheck('salesType',"Grosir","Grosir")} classname={'text-xs font-medium text-neutral-900'} label='Grosir' />
+                    </div>
+                </div>}
+                {/* Promo */}
+                {(menu==='produk'&&getListFilter?.bonus?.length>0)&&<div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('Promo')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t('LabelfilterProdukPromo')}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'Promo')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'Promo') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'Promo')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4 overflow-y-auto"
+                    >
+                        {getListFilter?.bonus?.map((val,i)=><Checkbox checked={getFilterProduct?.promo?.length?getFilterProduct?.promo?.some(a=>a===val?.id):false} value={val?.value} onChange={()=>handleCheck('promo',val?.id,val?.value)} classname={'text-xs font-medium text-neutral-900'} label={val?.value} key={i} />)}
+                    </div>
+                </div>}
+                {/* Jenis Produk */}
+                {menu==='produk'&&<div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('JenisProduk')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t("LabelfilterProdukJenisProduk")}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'JenisProduk')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'JenisProduk') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'JenisProduk')?'hidden':'',
+                        }}
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4 overflow-y-auto"
+                    >
+                        {getListFilter?.condition?.map(val=><Checkbox key={val?.id} classname={'text-xs font-medium text-neutral-900'} label={val?.value} value={val?.id} checked={getFilterProduct?.conditionID?.some(a=>a===val?.id)} onChange={()=>handleCheck('conditionID',val?.id,val?.value)} />)}
+                    </div>
+                </div>}
+
+                {/* Rating */}
+                <div className="flex flex-col w-full gap-4 pt-4">
+                    <div
+                        className="flex items-center w-full justify-between cursor-pointer"
+                        onClick={() => handleExpanded('Rating')}
+                    >
+                        <span className="text-xs text-neutral-900 font-semibold">{t("LabelfilterProdukRatingProduk")}</span>
+                        <IconComponent
+                            src={`${
+                                getExpanded.some(a => a === 'Rating')
+                                    ? '/icons/chevron-up.svg'
+                                    : '/icons/chevron-down.svg'
+                            }`}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            maxHeight: getExpanded.some(a => a === 'Rating') ? '300px' : '0px',
+                            overflow: !getExpanded.some(a => a === 'Rating')?'hidden':'',
+                        }}
+                        // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB-11
+                        className="transition-all duration-300 ease-in-out flex flex-col gap-4"
+                    >
+                        <div className='flex items-center'>
+                            <Checkbox checked={getFilterProduct?.rating?.some(a=>a=="5")} onChange={()=>handleCheck('rating',5,'5 Bintang')} label='' />
+                            <IconComponent src={'/icons/product-star.svg'} width={14} height={14} />
+                            <span className='text-xs font-medium text-neutral-900 ml-1'>5 {t('LabelfilterProdukBintang')}</span>
+                        </div>
+                        <div className='flex items-center'>
+                            <Checkbox label='' checked={getFilterProduct?.rating?.some(a=>a=="4")} onChange={()=>handleCheck('rating',4,'4 Bintang')} />
+                            <IconComponent src={'/icons/product-star.svg'} width={14} height={14} />
+                            <span className='text-xs font-medium text-neutral-900 ml-1'>4 {t('LabelfilterProdukBintang')}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <Button Class='w-full max-w-none h-8' color='primary_secondary' onClick={()=>{
+                getFilterProduct?.resetFilter()
+                setMatchFilter([])
+                }}>Reset</Button>
+        </div>
+    );
+}
+
+export default FilterProductsWeb;
+  

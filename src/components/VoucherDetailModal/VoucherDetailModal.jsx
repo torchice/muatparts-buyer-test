@@ -1,0 +1,197 @@
+import VoucherInfo from "./VoucherInfo";
+import TermsAndConditions from "./TermsAndConditions";
+import Image from "next/image";
+import { formatCurrency } from "@/utils/currency";
+import { customFetcherBuyer } from "@/utils/customFetcher";
+import useSWR from "swr";
+import { useMemo } from "react";
+
+const fetcher = async ({ id }) => {
+	return customFetcherBuyer(
+		`${process.env.NEXT_PUBLIC_GLOBAL_API}muatparts/voucher/voucher-detail/${id}`,
+		{
+			method: "GET",
+		}
+	);
+};
+export default function VoucherDetailModal({ isOpen, setIsOpen, voucher }) {
+	const hasQuota = useMemo(() => {
+		if (!voucher) return false;
+		return voucher.usageCount < voucher.usageQuota;
+	}, [voucher]);
+
+	const voucherDate = useMemo(() => {
+		if (!voucher) return "-";
+		const formatter = new Intl.DateTimeFormat("id-ID", {
+			year: "numeric",
+			month: "short",
+			day: "2-digit",
+		});
+		return `${formatter.format(
+			new Date(voucher.startDate)
+		)} - ${formatter.format(new Date(voucher.expiredAt))}`;
+	}, [voucher]);
+
+	const usagePercent = useMemo(() => {
+		if (!voucher) return 0;
+		return (voucher.usageCount / voucher.usageQuota) * 100;
+	}, [voucher]);
+
+	const discountValue = useMemo(() => {
+		if (!voucher) return 0;
+
+		if (voucher.discountType === "Persentase")
+			return `${new Intl.NumberFormat("id-ID").format(
+				voucher.discountValue
+			)}%`;
+
+		return formatCurrency(voucher.discountValue, true);
+	});
+	
+	return (
+		<div
+			className={`fixed inset-0 z-[90] flex items-center justify-center ${
+				!isOpen ? "hidden" : "block"
+			}`}
+		>
+			{/* Backdrop */}
+			<div
+				className="absolute inset-0 bg-black/50"
+				onClick={() => setIsOpen(false)}
+			/>
+			<div className="relative rounded-xl max-w-screen-sm">
+				<div>
+					<div className="flex overflow-hidden relative flex-col w-full aspect-[4] text-neutral-50">
+						<Image
+							src="/voucher-detail-bg.png"
+							className="object-cover absolute inset-0 size-full"
+							alt="Voucher banner"
+							width={472}
+							height={118}
+						/>
+						<div className="flex relative gap-x-[130px] ml-[100px] w-full my-auto items-center">
+							<div className="flex flex-col gap-y-3 items-center w-[160px]">
+								<span className="font-bold text-[16px] leading-[19.2px]">
+									{`Diskon ${discountValue}`}
+								</span>
+								<div className="flex gap-x-[3px]">
+									<div className="flex flex-col items-end justify-center gap-y-1">
+										<span className="font-medium text-[12px] leading-[14.4px]">
+											hingga
+										</span>
+										<span className="font-bold text-[16px] leading-[19.2px]">
+											Rp
+										</span>
+									</div>
+									<span className="font-bold text-[48px] leading-[57.6px]">
+										{voucher?.discountMax
+											? formatCurrency(
+													voucher.discountMax
+											  )
+											: 0}
+									</span>
+								</div>
+							</div>
+							<div className="flex flex-col gap-y-2">
+								<Image
+									src="/muatparts-logo.png"
+									alt="muatparts"
+									height={20}
+									width={100}
+								/>
+								<div className="flex gap-x-1 items-center">
+									<span className="font-medium text-sm leading-[13px]">
+										{voucherDate}
+									</span>
+								</div>
+								<span className="font-medium text-xs leading-[10.4px] max-w-[157px]">
+									*Kamu bisa langsung pakai voucher ini di
+									halaman checkout
+								</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div className="flex flex-col items-center gap-y-2.5 py-6 pl-6 w-full bg-white rounded-b-xl">
+					<div className="flex flex-col justify-center w-full gap-y-2.5 ">
+						{hasQuota ? (
+							<div className="flex flex-col w-full pr-6">
+								<div className="flex flex-col gap-y-1.5">
+									<div className="self-center relative h-[10px] w-full p-0.5 bg-neutral-200 rounded-[5px] overflow-hidden">
+										<div
+											className="absolute top-0 left-0 h-full bg-blue-500"
+											style={{
+												width: `${usagePercent}%`,
+											}}
+										/>
+									</div>
+									<div className="flex gap-1 items-center w-full">
+										<div className="font-medium text-[10px] leading-[13px] my-auto text-ellipsis">
+											Kuota Voucher Telah Terpakai
+										</div>
+										<div className="text-[10px] leading-[13px] my-auto text-ellipsis">
+											<span className="font-bold">
+												{usagePercent.toFixed(0)}%
+											</span>
+										</div>
+									</div>
+								</div>
+							</div>
+						) : null}
+						<div className="flex gap-3 justify-center items-start w-full ">
+							<div className="flex overflow-y-scroll pr-5 flex-col flex-1 shrink basis-0 w-full">
+								<div className="flex flex-col gap-y-3 pb-4 w-full border-b border-solid border-b-neutral-400">
+									<div className="flex justify-between items-center w-full">
+										<div className="flex gap-2 items-center self-stretch my-auto font-medium text-neutral-600">
+											<img
+												loading="lazy"
+												src="https://cdn.builder.io/api/v1/image/assets/TEMP/abb8247c2e6ffa6b88ea24b9e94eafcf9298c3ffea1dfdcc217a4e95a7eec4bf?placeholderIfAbsent=true&apiKey=60cdcdaf919148d9b5b739827a6f5b2a"
+												alt=""
+												className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square"
+											/>
+											<div className="font-medium text-[12px] leading-[14.4px] text-neutral-700 my-auto">
+												Berlaku Hingga
+											</div>
+										</div>
+										<div className="font-semibold text-[12px] leading-[14.4px] my-auto text-right text-black">
+											{voucherDate}
+										</div>
+									</div>
+									<div className="flex justify-between items-center w-full">
+										<div className="flex gap-2 items-center self-stretch my-auto font-medium text-neutral-600">
+											<img
+												loading="lazy"
+												src="https://cdn.builder.io/api/v1/image/assets/TEMP/ce19104611027b6d09f0bc4531d59d8cc9699e0e3a5931701dfb16def9e8c28c?placeholderIfAbsent=true&apiKey=60cdcdaf919148d9b5b739827a6f5b2a"
+												alt=""
+												className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square"
+											/>
+											<div className="font-medium text-[12px] leading-[14.4px] text-neutral-700 my-auto">
+												Mininum Transaksi
+											</div>
+										</div>
+										<div className="font-semibold text-[12px] leading-[14.4px] my-auto text-right text-black">
+											{formatCurrency(
+												voucher?.transactionMin,
+												true
+											)}
+										</div>
+									</div>
+								</div>
+								<TermsAndConditions voucher={voucher} />
+							</div>
+						</div>
+					</div>
+					<div className="mt-6">
+						<button
+							color="primary"
+							className=" px-7 py-3 rounded-full bg-blue-600 text-white"
+							onClick={() => setIsOpen(false)}
+						>
+							Kembali
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}

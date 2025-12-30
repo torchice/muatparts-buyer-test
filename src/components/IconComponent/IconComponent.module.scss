@@ -1,0 +1,33 @@
+.primary {
+  path {
+    stroke: #176cf7;
+  }
+}
+.secondary {
+  path {
+    stroke: #ffc117;
+  }
+}
+.active {
+  path {
+    stroke: #c22716;
+  }
+}
+
+.warning {
+  path {
+    stroke: #ff7a00;
+  }
+}
+
+.error {
+  path {
+    stroke: #ee4343;
+  }
+}
+
+.white {
+  path {
+    stroke: white;
+  }
+}

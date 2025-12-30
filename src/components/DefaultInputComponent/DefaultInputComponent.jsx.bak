@@ -1,0 +1,42 @@
+
+'use client';
+
+import Input from '../Input/Input';
+import style from './DefaultInputComponent.module.scss'
+function DefaultInputComponent({
+    classname,
+    label,
+    onChange,
+    value,
+    placeholder,
+    iconsInput,
+    focusEvent,
+    isError,
+    isOptional,
+    supportiveText={left:'',right:''},
+    type="input",
+    classTextarea,
+    classInput,
+    classSuppertiveTextLeft,
+    classSuppertiveTextRight,
+    ...props
+}) {
+    return (
+        <div className={`${style.main} flex flex-col gap-4 ${classname}`}>
+            <span className='semi-sm text-neutral-900'>{label} {isOptional&&<span className='text-[10px] font-semibold'>(Optional)</span>}</span>
+            {type==='input'&&<div className='relative'>
+                <Input focusEvent={focusEvent} icon={iconsInput} classname={`w-full ${isError?'input-error':''} ${classInput}`} value={value} changeEvent={onChange} placeholder={placeholder} {...props} />
+                {supportiveText.left?<span className={`text-neutral-600 medium-xs left-0 top-12 absolute ${classSuppertiveTextLeft}`}>{supportiveText.left}</span>:''}
+                {supportiveText.right?<span className={`text-neutral-600 medium-xs right-0 top-12 absolute ${classSuppertiveTextRight}`}>{supportiveText.right}</span>:''}
+            </div>}
+            {type==='textarea'&&<div className='relative'>
+                <textarea onFocus={focusEvent} placeholder={placeholder} value={value} onChange={onChange} className={` ${style.textarea} ${isError?'input-error':''} ${classTextarea}`} {...props}></textarea>
+                {supportiveText.left?<span className={`text-neutral-600 medium-xs left-0 top-14 absolute ${classSuppertiveTextLeft}`}>{supportiveText.left}</span>:''}
+                {supportiveText.right?<span className={`text-neutral-600 medium-xs right-0 top-14 absolute ${classSuppertiveTextRight}`}>{supportiveText.right}</span>:''}
+            </div>}
+        </div>
+    );
+}
+
+export default DefaultInputComponent;
+  

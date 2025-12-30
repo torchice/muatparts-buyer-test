@@ -1,0 +1,158 @@
+/**
+ * Fungsi untuk menghitung total penghematan yang bisa didapatkan
+ * @param {Object} voucherData - Data voucher yang tersedia
+ * @param {number} purchaseAmount - Jumlah pembelian (opsional)
+ * @returns {number} - Total penghematan dalam bentuk number
+ */
+export function hitungPenghematan(voucherData, purchaseAmount = 0, shippingAmount = 0) {
+  // Ekstrak data voucher
+  const shippingVoucher = voucherData.shipping || {};
+  const purchaseVoucher = voucherData.purchase || {};
+
+  let totalPenghematan = 0;
+
+  // Cek voucher pengiriman
+  if (shippingVoucher.details) {
+    const shippingDiscount = shippingVoucher.details.discountValue || 0;
+
+    if (shippingDiscount > 0) {
+      totalPenghematan += shippingDiscount;
+    }
+  }
+
+  // Cek voucher pembelian
+  if (purchaseVoucher.details) {
+    const purchaseDetails = purchaseVoucher.details;
+    const minPurchase = purchaseDetails.minPurchase || 0;
+
+    // Hanya berlaku jika pembelian memenuhi minimum
+    if (purchaseAmount >= minPurchase) {
+      const purchaseDiscount = purchaseDetails.discountValue || 0;
+      const maxDiscount = purchaseDetails.discountMax;
+
+      let actualDiscount = purchaseDiscount;
+
+      // Jika tipe diskon persentase, hitung berdasarkan pembelian
+      if (purchaseDetails.discountType === "percentage") {
+        actualDiscount = (purchaseAmount * purchaseDiscount) / 100;
+
+        // Terapkan batas maksimum diskon jika ada
+        if (maxDiscount !== null && actualDiscount > maxDiscount) {
+          actualDiscount = maxDiscount;
+        }
+      }
+
+      totalPenghematan += actualDiscount;
+    }
+  }
+
+  return totalPenghematan;
+}
+
+/**
+ * Helper function to calculate individual voucher value
+ *
+ * @param {Object} voucher - Individual voucher object
+ * @param {number} purchaseAmount - Purchase amount
+ * @returns {number} Calculated voucher value
+ */
+function calculateVoucherValue(voucher, purchaseAmount) {
+  const { discountType, discountValue, discountMax, minPurchase } =
+    voucher.details;
+
+  // Note: We're ignoring the isActive status as requested
+
+  // Handle zero or negative purchase amounts
+  if (purchaseAmount <= 0) {
+    return 0; // No discount for zero or negative purchases
+  }
+
+  // Check if minimum purchase requirement is met
+  if (purchaseAmount < minPurchase) {
+    return 0; // Minimum purchase requirement not met
+  }
+
+  // Calculate discount based on type
+  if (discountType === "nominal") {
+    // For nominal type, return the smaller of discount value or purchase amount
+    return Math.min(discountValue, purchaseAmount);
+  } else if (discountType === "percentage") {
+    // For percentage type, calculate discount based on purchase amount
+    const calculatedDiscount = (discountValue / 100) * purchaseAmount;
+
+    // Apply discount max if it exists
+    if (discountMax !== null && calculatedDiscount > discountMax) {
+      return discountMax;
+    }
+
+    return calculatedDiscount;
+  }
+
+  // Return 0 for unknown discount types
+  return 0;
+}
+
+export function extractVoucherIDs(voucherData) {
+  const result = [];
+
+  // Extract shipping voucher ID if it exists
+  if (
+    voucherData.shipping &&
+    voucherData.shipping.identification &&
+    voucherData.shipping.identification.id
+  ) {
+    result.push({
+      voucherID: voucherData.shipping.identification.id,
+    });
+  }
+
+  // Extract purchase voucher ID if it exists
+  if (
+    voucherData.purchase &&
+    voucherData.purchase.identification &&
+    voucherData.purchase.identification.id
+  ) {
+    result.push({
+      voucherID: voucherData.purchase.identification.id,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Calculate voucher value based on discount type
+ *
+ * @param {Object} voucherData - Object containing shipping and purchase voucher data
+ * @param {number} purchaseAmount - Total purchase amount (required for percentage discounts)
+ * @returns {Object} Object containing calculated values for shipping and purchase vouchers
+ */
+export function getVoucherValues(voucherData, purchaseAmount = 0) {
+  // Validate input
+  if (!voucherData) {
+    throw new Error("Invalid voucher data object");
+  }
+
+  const result = {
+    shipping: 0,
+    purchase: 0,
+  };
+
+  // Calculate shipping voucher value if present
+  if (voucherData.shipping) {
+    result.shipping = calculateVoucherValue(
+      voucherData.shipping,
+      purchaseAmount
+    );
+  }
+
+  // Calculate purchase voucher value if present
+  if (voucherData.purchase) {
+    result.purchase = calculateVoucherValue(
+      voucherData.purchase,
+      purchaseAmount
+    );
+  }
+
+  return result;
+}

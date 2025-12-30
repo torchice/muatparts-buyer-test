@@ -1,0 +1,1227 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import style from "./HeaderContainer.module.scss";
+import Input from "@/components/Input/Input";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import Image from "next/image";
+import { headerProps } from "./headerProps";
+import ModalComponent from "@/components/Modals/ModalComponent";
+import { tips } from "./constanta";
+import Bubble from "@/components/Bubble/Bubble";
+import Button from "@/components/Button/Button";
+import { categoriesZustand } from "@/store/products/categoriesZustand";
+import CategoryNested from "./CategoryNested";
+import ProtectComponent from "@/common/ProtectComponent";
+import CustomLink from "@/components/CustomLink";
+import { useCustomRouter } from "@/libs/CustomRoute";
+import { userZustand } from "@/store/auth/userZustand";
+import { authZustand } from "@/store/auth/authZustand";
+import SWRHandler from "@/services/useSWRHook";
+import ImageComponent from "@/components/ImageComponent/ImageComponent";
+import debounce from "@/libs/debounce";
+import { hightlightText } from "@/libs/TypographServices";
+import { useSearchParams, usePathname } from "next/navigation";
+import DataNotFound from "@/components/DataNotFound/DataNotFound";
+import { filterProduct } from "@/store/products/filter";
+import ListAddressContainer from "../ListAddressContainer/ListAddressContainer";
+import AddAddressContainer from "../AddAddressContainer/AddAddressContainer";
+import { mutate } from "swr";
+import { userLocationZustan } from "@/store/manageLocation/managementLocationZustand";
+import ConfigUrl from "@/services/baseConfig";
+import { useLanguage } from "@/context/LanguageContext";
+import { metaSearchParams } from "@/libs/services";
+import LocationManagementModalWeb from "../LocationManagementModalWeb/LocationManagementModalWeb";
+import useCounterStore from "@/store/counter";
+import DropdownMultibahasa from "@/components/DropdownMultibahasa/DropdownMultibahasa";
+// Improvement Trigger Multibahasa
+function HeaderContainerWeb({ renderAppBar, location, ...props }) {
+  const { t } = useLanguage();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useCustomRouter();
+
+  const headerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const base_type_category = ["groupcategoryID", "categoryID", "subcategoryID"];
+
+  const [headerCount, setHeaderCount] = useState();
+  const [showInput, setShowInput] = useState(false);
+  const [getProfile, setProfile] = useState([]);
+  const [getModal, setModal] = useState("");
+  const [getCategory, setCategory] = useState();
+  const [getCategorySearch, setCategorySearch] = useState();
+  const [getCategorySearchValue, setCategorySearchValue] = useState();
+  const [getSearch, setSearch] = useState("");
+  const [getSearchParam, setSearchParam] = useState("");
+
+  const { setFilterProduct } = filterProduct();
+  const { setHeaderHeight } = headerProps();
+  const { fetchCounter, setFetchCounter } = useCounterStore();
+
+  const { get, deleted } = ConfigUrl();
+  const { useSWRMutateHook, useSWRHook } = SWRHandler();
+  const { trigger } = useSWRMutateHook(
+    process.env.NEXT_PUBLIC_GLOBAL_API +
+      "v1/muatparts/auth/revoke-refresh-token"
+  );
+  const { data, isLoading } = useSWRHook(
+    getSearchParam
+      ? `v1/muatparts/product/search_suggestion?q=${getSearchParam}&groupcategoryID=${
+          getCategorySearch?.[0] ? getCategorySearch?.[0] : ""
+        }&categoryID=${
+          getCategorySearch?.[1] ? getCategorySearch?.[1] : ""
+        }&subcategoryID=${getCategorySearch?.[2] ? getCategorySearch?.[2] : ""}`
+      : null
+  );
+  const { data: banner_search } = useSWRHook("v1/muatparts/banner_search");
+  const { data: history_search, mutate: mutate_history } = useSWRHook(
+    props?.isLogin && "v1/muatparts/product/search_history"
+  );
+  const { data: events } = useSWRHook("v1/muatparts/events");
+
+  const { categories } = categoriesZustand();
+  const { removeUser } = userZustand();
+  const { clearToken } = authZustand();
+  const productFilter = filterProduct();
+  const manlok = userLocationZustan();
+
+  async function handleDeletehistory(val) {
+    deleted({ path: "v1/muatparts/product/search_history/" + val })
+      .catch((a) => console.log(a))
+      .then(() => mutate_history("v1/muatparts/product/search_history"));
+  }
+  async function handleDeletehistoryAll() {
+    deleted({ path: "v1/muatparts/product/search_history_all/" })
+      .catch((a) => console.log(a))
+      .then((a) => mutate_history("v1/muatparts/product/search_history"));
+  }
+
+  function handleLogout() {
+    removeUser();
+    clearToken();
+    manlok?.resetLocation();
+    trigger({ refreshToken: props?.refreshToken }).then((a) => {
+      if (a?.status == 200)
+        router.push(`${process.env.NEXT_PUBLIC_INTERNAL_WEB}login/signout`);
+    });
+  }
+  const handleInputSearch = useCallback(
+    debounce((e) => {
+      setSearchParam(e);
+    }, 700),
+    []
+  );
+  const handleSearchProduct = (val, alias = false) => {
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0419
+    setSearch(val);
+    // productFilter?.setFilterProduct('q',val)
+    // productFilter?.setFilterProduct('alias',!!(alias))
+    setModal("");
+    setShowInput(false);
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0259
+    const filter = productFilter;
+    delete filter?.q;
+    mutate_history("v1/muatparts/product/search_history");
+    router.push(`/products?q=${val}&&${metaSearchParams(filter)}`);
+  };
+  function handleSubmitSearch(e) {
+    e?.preventDefault();
+    // 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - LB - 0207
+    if (getSearch?.trim()) {
+      handleSearchProduct(getSearch);
+    }
+  }
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0373
+  useEffect(() => {
+    if (getCategorySearch?.length) {
+      let tmp = getCategorySearch
+        ?.map((val, i) => ({ [base_type_category[i]]: [val] }))
+        ?.reduce((a, b) => ({ ...a, ...b }));
+      Object.entries(tmp).map(([key, val]) => {
+        setFilterProduct(key, val);
+      });
+    }
+  }, [getCategorySearch]);
+  useEffect(() => {
+    if (!props?.isLogin) manlok?.resetLocation();
+  }, [props?.isLogin]);
+  useEffect(() => {
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0478
+    const segments = pathname.split('/').filter(Boolean)
+
+    const isSearchPage = pathname === '/products' && searchParams.get('q') !== ''
+    const isProductDetailPage = segments.length === 2
+
+    if (isSearchPage) {
+      setSearch(searchParams.get('q'))
+    } else if (isProductDetailPage) {
+      // Don't update search, keep it as-is
+    } else {
+      setSearch('')
+    }
+  }, [pathname, searchParams]);
+  useEffect(() => {
+    // if (getProfile?.length) {
+    // const newProfileUpdate = getProfile.map((val) => {
+    //   if (val.title === "Favorit") val.badges = 3;
+    //   if (val.title === "Diskusi") val.badges = 3;
+    //   return val;
+    // });
+    const ProfileHover = [
+      {
+        url: "/album",
+        icon: "/icons/heart-outline.svg",
+        title: t("titleHeaderFavorit"),
+        badges: 0,
+      },
+      // {
+      //     url:'/',
+      //     icon:'/icons/messages-outline.svg',
+      //     title:'Diskusi',
+      //     badges:0
+      // },
+      {
+        url: "/voucher/buyer",
+        icon: "/icons/voucher-outline.svg",
+        title: t("titleHeaderVoucher"),
+        badges: 0,
+      },
+      {
+        url: "/daftarpesanan",
+        icon: "/icons/list-outline.svg",
+        title: t("titleHeaderDaftarPesanan"),
+        badges: 0,
+      },
+      {
+        url: "/ulasanbuyer",
+        icon: "/icons/product-reviews-outline.svg",
+        title: t("titleHeaderUlasanProduk"),
+        badges: 0,
+      },
+    ];
+    setProfile(ProfileHover);
+
+    // 25. 07 - QC Plan - Web Apps - Marketing Muatparts - LB - 0032
+    if (fetchCounter) {
+      get({
+        path: `v1/muatparts/general/navbar-statistics/buyer`,
+      }).then((a) => {
+        setHeaderCount(a?.data?.Data);
+        setFetchCounter(false);
+      });
+    }
+    // }
+  }, [fetchCounter]);
+  useEffect(() => {
+    if (headerRef?.current?.offsetHeight)
+      setHeaderHeight?.(headerRef?.current?.offsetHeight);
+  }, []);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (inputRef.current && !inputRef.current.contains(event.target)) {
+        setShowInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // useEffect(() => {
+  //   console.log(headerCount, " header count");
+  // }, [headerCount]);
+
+  const sellerLink =
+    props?.user?.role == "seller"
+      ? process.env.NEXT_PUBLIC_SELLER_WEB +
+        `muatparts/dashboard${
+          props?.accessToken
+            ? `?accessToken=${props?.accessToken}&refreshToken=${props?.refreshToken}`
+            : ""
+        }`
+      : process.env.NEXT_PUBLIC_SELLER_WEB +
+        `muatparts/landing${
+          props?.accessToken
+            ? `?accessToken=${props?.accessToken}&refreshToken=${props?.refreshToken}`
+            : ""
+        }`;
+
+  return (
+    <header className={style.main} ref={headerRef}>
+      <ModalComponent
+        classname={"!items-start "}
+        classnameContent={`mt-1 mx-auto ${
+          getCategory?.length ? "w-[1088px]" : "w-fit !h-fit !min-h-none"
+        }  ml-[5%] p-4 flex gap-4 h-full max-h-[296px]`}
+        hideHeader
+        isOpen={getModal === "show_category"}
+        setClose={() => setModal("")}
+        showButtonClose={false}
+      >
+        {/* group category */}
+        {!!categories?.length && (
+          <ul className="w-[270px] list-none h-full ">
+            {categories.map((val, i) => (
+              <li key={i}>
+                <div
+                  onMouseEnter={() => setCategory(val)}
+                  className={`${
+                    getCategory?.id === val.id ? "bg-neutral-200" : ""
+                  } flex w-full justify-between items-center hover:bg-neutral-200 py-1 px-[10px] rounded-md cursor-pointer`}
+                >
+                  <div className="flex items-center gap-3">
+                    {val.icon ? (
+                      <ImageComponent
+                        width={24}
+                        height={24}
+                        src={val.icon}
+                        alt="chopper"
+                      />
+                    ) : (
+                      ""
+                    )}
+                    <span className="font-medium text-xs text-neutral-900">
+                      {val.value}
+                    </span>
+                  </div>
+                  <span className="w-4 h-4">
+                    <IconComponent src={"/icons/chevron-right.svg"} />
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {getCategory && <span className="w-[1px] h-auto bg-neutral-400"></span>}
+        {/* category */}
+        {/* LBM */}
+        {getCategory && (
+          <div className="pl-3 w-[578px] flex flex-col gap-3 overflow-y-auto h-auto ">
+            {getCategory?.value && (
+              <span className="font-bold text-sm text-neutral-900">
+                Kategori {getCategory.value}
+              </span>
+            )}
+            {getCategory?.value && (
+              <span className="h-[1px] w-full bg-neutral-400"></span>
+            )}
+            <div className="grid grid-cols-2 gap-2 w-full pl-[10px] h-fit">
+              {getCategory?.children?.map((val) => (
+                <CustomLink
+                  href={`/${getCategory?.id}/${val?.id}`}
+                  className="w-50% font-medium text-xs text-neutral-900 cursor-pointer"
+                  key={val.id}
+                  onClick={() => setModal("")}
+                >
+                  {val.value}
+                </CustomLink>
+              ))}
+            </div>
+          </div>
+        )}
+        {!categories?.length && <span>No Categories</span>}
+        {/* banner */}
+        {getCategory && (
+          <Image
+            width={176}
+            height={264}
+            src={
+              process.env.NEXT_PUBLIC_ASSET_REVERSE + "/img/ads_category.png"
+            }
+            alt="ads"
+          />
+        )}
+      </ModalComponent>
+      <ModalComponent
+        full
+        hideHeader
+        isOpen={getModal === "show_tips"}
+        setClose={() => setModal("")}
+      >
+        <div className="flex flex-col gap-4 w-[471px] h-fit py-6 px-4">
+          <h1 className="text-base font-bold text-neutral-900 w-full text-center">
+            {t("titleTipsPencarian")}
+          </h1>
+          <span className="font-medium text-neutral-600 text-xs">
+            {t("ketTipsPencarian")}
+          </span>
+          <div className={`flex flex-col`}>
+            {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0523 */}
+            {tips.map((val, i) => {
+              if (i == 0)
+                return (
+                  <div
+                    key={i}
+                    className="w-full py-3 px-6 border-t border-neutral-400 flex "
+                  >
+                    <span className="text-primary-700 text-xs font-bold w-1/2">
+                      {t(val.left)}
+                    </span>
+                    <span className="text-primary-700 text-xs font-bold w-1/2">
+                      {t(val.right)}
+                    </span>
+                  </div>
+                );
+              if (i == tips.length - 1)
+                return (
+                  <div
+                    key={i}
+                    className="w-full py-3 px-6 border-y border-neutral-400 flex "
+                  >
+                    <span className="text-neutral-900 text-[10px] font-medium w-1/2">
+                      {t(val.left)}
+                    </span>
+                    <span className="text-neutral-900 text-[10px] font-medium w-1/2">
+                      {t(val.right)}
+                    </span>
+                  </div>
+                );
+              return (
+                <div
+                  key={i}
+                  className="w-full py-3 px-6 border-t border-neutral-400 flex "
+                >
+                  <span className="text-neutral-900 text-[10px] font-medium w-1/2">
+                    {t(val.left)}
+                  </span>
+                  <span className="text-neutral-900 text-[10px] font-medium w-1/2">
+                    {t(val.right)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </ModalComponent>
+      <LocationManagementModalWeb
+        isOpen={getModal}
+        setClose={() => {
+          setModal("");
+        }}
+      />
+      {/* <ModalComponent
+        full
+        hideHeader
+        isOpen={getModal === "show_location"}
+        setClose={() => {
+          setModal("");
+        }}
+      >
+        <ListAddressContainer
+          accessToken={props?.accessToken}
+          locations={location}
+          onChange={() => setModal("add_location")}
+          onAddAddress={() => setModal("add_location")}
+          onSave={() => setModal("")}
+        />
+      </ModalComponent>
+      <ModalComponent
+        classnameContent={
+          "!py-8 !px-6 !max-h-[500px] !overflow-y-hidden !h-full !w-full !max-w-[471px]"
+        }
+        full
+        hideHeader
+        isOpen={getModal === "add_location"}
+        setClose={() => {
+          setModal("show_location");
+        }}
+      >
+        <AddAddressContainer
+          onClickSave={() => {
+            setModal("show_location");
+            mutate("v1/muatparts/profile/location");
+          }}
+          classname={"!overflow-auto"}
+        />
+      </ModalComponent> */}
+      <ModalComponent
+        isOpen={getModal === "show_camera"}
+        setClose={() => setModal("")}
+        hideHeader
+        classnameContent={"w-[337px] h-[377px]"}
+        full
+      >
+        <div className="flex flex-col gap-3 justify-start items-center text-neutral-900 py-6 px-4">
+          <span className="bold-base">Pencarian Gambar</span>
+          <span className="medium-xs text-center">
+            Temukan Produk Impianmu dengan Mudah! Hanya Foto & Cari di Aplikasi
+            muatmuat
+          </span>
+          <Image
+            width={200}
+            height={200}
+            src={process.env.NEXT_PUBLIC_ASSET_REVERSE + "/img/barcode.png"}
+            alt="barcode"
+          />
+          <Button
+            Class="semi-xs h-7"
+            onClick={() =>
+              router.push(
+                process.env.NEXT_PUBLIC_INTERNAL_WEB + "register/download_apps"
+              )
+            }
+          >
+            Unduh Aplikasi muatmuat
+          </Button>
+        </div>
+      </ModalComponent>
+      {
+        <>
+          {!renderAppBar && (
+            <div className="w-full bg-muat-parts-non-800 flex px-10 py-2 h-9">
+              <div className="w-full max-w-7xl flex justify-between mx-auto">
+                <div className="flex items-center">
+                  <div className="flex items-center gap-2 cursor-pointer group relative">
+                    <CustomLink
+                      className="flex"
+                      href={
+                        process.env.NEXT_PUBLIC_INTERNAL_WEB +
+                        "register/download_apps"
+                      }
+                    >
+                      <IconComponent
+                        src={"/icons/phone.svg"}
+                        width={16}
+                        height={16}
+                        alt="phone"
+                      />
+                      <p className="text-neutral-50 font-semibold  text-xs pt-[1px]">
+                        {t("linkDownloadMuatMuat")}
+                      </p>
+                    </CustomLink>
+
+                    <div className="hidden absolute group-hover:flex top-6 left-0  cursor-default">
+                      <div className="bg-white rounded-xl w-[352px] h-[156px] shadow-muatmuat z-[90] overflow-hidden gap-3 flex p-4">
+                        <ImageComponent
+                          width={132}
+                          height={132}
+                          src={"/img/barcode.png"}
+                          alt="barcode"
+                        />
+                        <div className="flex flex-col gap-4">
+                          <span className="text-neutral-900 text-sm font-semibold">
+                            {t("titleScanQrdownloadHeader")}{" "}
+                          </span>
+                          <a
+                            className="flex"
+                            href={
+                              process.env.NEXT_PUBLIC_INTERNAL_WEB +
+                              "register/download_apps"
+                            }
+                          >
+                            <Image
+                              width={98}
+                              height={28}
+                              alt="playstore"
+                              src={
+                                process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                                "/img/GooglePlay.png"
+                              }
+                            />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <DropdownMultibahasa className="ml-6" />
+                </div>
+                <div className="flex items-center gap-6 justify-end">
+                  {/* 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer */}
+                  {/* 
+                  LB - 0002
+                  LB - 0003
+                  LB - 0004
+                  LB - 0005
+                  LB - 0006
+                  LB - 0007
+                  LB - 0008 
+                  LB - 0010
+                  LB - 0015
+                  LB - 0032
+                  LB - 0034
+                  LB - 0035
+                  LB - 0036
+                  LB - 0040
+                  LB - 0041
+                  LB - 0045
+                */}
+                  <a
+                    href={process.env.NEXT_PUBLIC_INTERNAL_WEB}
+                    className="text-neutral-50 font-medium  text-xs pt-[1px]"
+                  >
+                    {t("linkKembalikeMuatMuat")}
+                  </a>
+                  <a
+                    href={
+                      process.env.NEXT_PUBLIC_INTERNAL_WEB +
+                      "traffic/redirect_faq?from=gen"
+                    }
+                    className="text-neutral-50 font-medium  text-xs pt-[1px]"
+                  >
+                    {t("linkPusatBantuan")}
+                  </a>
+                  <CustomLink href={sellerLink} className="flex gap-1">
+                    <IconComponent
+                      src={"/icons/store.svg"}
+                      width={14}
+                      height={14}
+                      alt="store"
+                    />
+                    <p className="text-neutral-50 font-medium  text-xs pt-[1px]">
+                      {t("linkJadiPenjual")}
+                    </p>
+                  </CustomLink>
+                  {props?.user?.id ? (
+                    <div className="flex items-center gap-3 cursor-pointer group relative max-w-[136px]">
+                      {props?.user?.photo ? (
+                        <Image
+                          src={`${props?.user?.photo}`}
+                          width={20}
+                          height={20}
+                          alt="profil"
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <span className="w-5 h-5"></span>
+                      )}
+                      <span className="text-neutral-50 font-medium  text-xs w-full line-clamp-1 mt-[1px]">
+                        {props?.user?.name}
+                      </span>
+                      <div className="hidden absolute group-hover:flex top-2 right-0 pt-4">
+                        <div className="bg-white z-[91] w-[327px] p-4 cursor-default h-[192px] flex rounded-lg p4 divide-x-2 divide-neutral-500 shadow-muatmuat">
+                          <div className="flex flex-col gap-4 pr-3">
+                            {getProfile.map((val, i) => {
+                              return (
+                                <CustomLink
+                                  key={i}
+                                  href={val.url}
+                                  className="flex items-center justify-between gap-4 w-full"
+                                >
+                                  <div className="flex items-center gap-[10px]">
+                                    <Image
+                                      width={16}
+                                      height={16}
+                                      src={
+                                        process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                                        val.icon
+                                      }
+                                      alt={val.title}
+                                    />
+                                    <span className="font-medium text-xs text-neutral-900">
+                                      {val.title}
+                                    </span>
+                                  </div>
+                                  {val.badges ? (
+                                    <span className="w-4 h-4 bg-error-400 rounded-full flex justify-center items-center font-bold text-[6px] text-neutral-50">
+                                      {val.badges}
+                                    </span>
+                                  ) : (
+                                    ""
+                                  )}
+                                </CustomLink>
+                              );
+                            })}
+                          </div>
+                          <div className="flex flex-col gap-4 pl-3 relative">
+                            <a
+                              href={
+                                process.env.NEXT_PUBLIC_INTERNAL_WEB +
+                                "accountmanagement/profileManagementCompany2"
+                              }
+                              className="flex items-center gap-[10px]"
+                            >
+                              <IconComponent
+                                width={16}
+                                height={16}
+                                src={"/icons/user-outline.svg"}
+                                alt="profile"
+                              />
+                              <span className="font-medium text-xs text-neutral-900">
+                                {t("titleHeaderProfile")}
+                              </span>
+                            </a>
+                            <a
+                              href={
+                                process.env.NEXT_PUBLIC_INTERNAL_WEB +
+                                "accountmanagement/pengaturan_akun"
+                              }
+                              className="flex items-center gap-[10px]"
+                            >
+                              <IconComponent
+                                width={16}
+                                height={16}
+                                src={"/icons/user-setting-outline.svg"}
+                                alt="profile"
+                              />
+                              <span className="font-medium text-xs text-neutral-900">
+                                {t("titleHeaderPengaturanAkun")}
+                              </span>
+                            </a>
+                            <span
+                              onClick={handleLogout}
+                              className="flex items-center gap-[10px] absolute bottom-3 select-none cursor-pointer"
+                            >
+                              <IconComponent
+                                width={16}
+                                height={16}
+                                src={"/icons/logout-outline.svg"}
+                                alt="profile"
+                              />
+                              <span className="font-medium text-xs text-error-400">
+                                {t("buttonLogOut")}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-[1px] text-neutral-50 font-medium text-xs pt-[1px]">
+                      <CustomLink
+                        href={
+                          process.env.NEXT_PUBLIC_INTERNAL_WEB +
+                          `register/email?from=mpbuyer&redirect=${window.location.href}`
+                        }
+                      >
+                        {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0885 */}
+                        {t("LabelnavbarDaftar")}
+                      </CustomLink>
+                      /
+                      <CustomLink
+                        href={
+                          process.env.NEXT_PUBLIC_INTERNAL_WEB +
+                          `login?from=mpbuyer&redirect=${window.location.href}`
+                        }
+                      >
+                        {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0885 */}
+                        {t("LabelnavbarMasuk")}
+                      </CustomLink>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="w-full bg-primary-700 flex mx-auto px-10 pt-5">
+            {!renderAppBar ? (
+              <div className="w-full max-w-7xl mx-auto flex items-center gap-[15px]">
+                <CustomLink href="/">
+                  <Image
+                    src={
+                      process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                      "/icons/muatparts.svg"
+                    }
+                    width={136}
+                    height={32}
+                    alt="Logo"
+                    className="h-8 mr-[9px]"
+                  />
+                </CustomLink>
+                <span
+                  className="h-8 p-3 medium-xs text-neutral-900 flex justify-between w-[164px] bg-neutral-50 border border-neutral-400 rounded-md items-center cursor-pointer select-none"
+                  onClick={() => setModal("show_all_categories")}
+                >
+                  <span className="w-full line-clamp-1">
+                    {getCategorySearchValue?.length
+                      ? getCategorySearchValue[
+                          getCategorySearchValue.length - 1
+                        ]
+                      : t("dropdownSemuaKategori")}
+                  </span>
+                  {getModal === "show_all_categories" ? (
+                    <IconComponent
+                      loader={false}
+                      src={"/icons/chevron-up.svg"}
+                    />
+                  ) : (
+                    <IconComponent
+                      loader={false}
+                      src={"/icons/chevron-down.svg"}
+                    />
+                  )}
+                </span>
+                <CategoryNested
+                  isOpen={getModal === "show_all_categories"}
+                  setClose={() => setModal("")}
+                  onSelected={(e) => setCategorySearch(e)}
+                  onSelectedValue={(e) => setCategorySearchValue(e)}
+                />
+                {/* 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer */}
+                {/* LB - 0053
+                LB - 0057
+                LB - 0058
+                LB - 0063 */}
+                <div className="relative flex-1" ref={inputRef}>
+                  <form onSubmit={handleSubmitSearch}>
+                    <Input
+                      placeholder={t("dropdownCariSparePart")}
+                      classname={`${style.inputSearch}`}
+                      width={391}
+                      value={getSearch}
+                      changeEvent={(e) => {
+                        // 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - LB - 0208
+                        // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0478
+                        if (e?.target?.value.length <= 100) {
+                          setSearch(e.target.value);
+                          handleInputSearch(e.target.value);
+                        }
+                      }}
+                      icon={{
+                        right: (
+                          <div className="flex gap-2 items-center !bg-transparent">
+                            {getSearch && (
+                              <span
+                                onClick={() => {
+                                  setSearch("");
+                                  setSearchParam("");
+                                }}
+                              >
+                                <IconComponent
+                                  src={"/icons/closes.svg"}
+                                  width={10}
+                                  height={10}
+                                />
+                              </span>
+                            )}
+                            <span
+                              className="w-4 h-4 select-none cursor-pointer"
+                              onClick={handleSubmitSearch}
+                            >
+                              <IconComponent
+                                src={"/icons/search.svg"}
+                                classname={style.iconnSearch}
+                              />
+                            </span>
+                            <span
+                              onClick={() => setModal("show_camera")}
+                              className="cursor-pointer"
+                            >
+                              <IconComponent
+                                src={"/icons/camera-outline-blue.svg"}
+                              />
+                            </span>
+                          </div>
+                        ),
+                      }}
+                      focusEvent={() => setShowInput(true)}
+                    />
+                  </form>
+                  <div className="absolute flex gap-4 -bottom-5 left-0 line-clamp-1 w-full">
+                    {events?.Data?.map((val) => (
+                      <CustomLink
+                        key={val?.ID}
+                        href={val?.url}
+                        className="text-neutral-50 text-xs font-medium whitespace-nowrap"
+                      >
+                        {val?.wording}
+                      </CustomLink>
+                    ))}
+                  </div>
+                  {showInput && (
+                    <div className="absolute p-4 flex rounded-md bg-neutral-50 shadow-md max-h-[284px] overflow-y-hidden w-full overflow-x-hidden">
+                      <div
+                        onBlur={() => setModal("")}
+                        className=" w-full  h-auto overflow-y-auto"
+                      >
+                        <div
+                          className={`flex flex-col w-full h-full overflow-y-auto pr-[6px] ${
+                            !!(
+                              history_search?.Data?.length ||
+                              data?.Data?.products?.length
+                            ) && "gap-3"
+                          }`}
+                        >
+                          <div className="flex flex-col gap-3">
+                            {!!(data?.Data?.products?.length && getSearch) && (
+                              <ul className="list-none">
+                                {data?.Data?.products?.map((val) => {
+                                  return (
+                                    <li key={val.id}>
+                                      <div
+                                        className="py-2 px-4 flex items-center gap-2 cursor-pointer hover:text-primary-700"
+                                        onClick={() =>
+                                          handleSearchProduct(val?.productName)
+                                        }
+                                      >
+                                        <IconComponent
+                                          src={"/icons/search.svg"}
+                                        />
+                                        <span
+                                          className="medium-xs"
+                                          dangerouslySetInnerHTML={{
+                                            __html: hightlightText(
+                                              getSearch,
+                                              val?.productName
+                                            ),
+                                          }}
+                                        ></span>
+                                      </div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
+                            {!!(data?.Data?.stores?.length && getSearch) && (
+                              <div className="flex flex-col">
+                                <span className="bold-sm">Cari Penjual</span>
+                                <ul className="list-none">
+                                  {data?.Data?.stores?.map((val) => {
+                                    return (
+                                      <li key={val.id}>
+                                        <div
+                                          className="py-2 px-4 flex items-center gap-2 cursor-pointer hover:text-primary-700"
+                                          onClick={() => {
+                                            handleSearchProduct(val?.storeName);
+                                            setFilterProduct("type", "store");
+                                          }}
+                                        >
+                                          {val?.logoPath && (
+                                            <ImageComponent
+                                              src={val?.logoPath}
+                                              width={16}
+                                              height={16}
+                                              className={"rounded-full"}
+                                            />
+                                          )}
+                                          <span
+                                            className="medium-xs"
+                                            dangerouslySetInnerHTML={{
+                                              __html: hightlightText(
+                                                getSearch,
+                                                val?.storeName
+                                              ),
+                                            }}
+                                          ></span>
+                                        </div>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            )}
+                            {data?.Data?.products?.length == 0 &&
+                            getSearch &&
+                            !isLoading ? (
+                              <DataNotFound
+                                width={40}
+                                height={34}
+                                classname={
+                                  "!flex-row gap-3 items-center pt-3 py-5"
+                                }
+                              >
+                                <span className="text-neutral-600 semi-base">
+                                  {/* 25. 11 - QC Plan - Web - Ronda Live Mei - LB - 0065 */}
+                                  {t("LabelsearchBarDropdownHasilPencarianTidakDitemukan")}
+                                </span>
+                              </DataNotFound>
+                            ) : (
+                              ""
+                            )}
+                            {getSearch && (
+                              <div className="flex flex-col">
+                                <span className="bold-sm">
+                                  {t("LabelsearchBarDropdownAlternatifPencarian")}
+                                </span>
+                                <ul className="list-none">
+                                  <li>
+                                    <div
+                                      className="py-2 px-4 flex items-center gap-2 cursor-pointer "
+                                      onClick={() => {
+                                        productFilter?.setFilterProduct(
+                                          "alias",
+                                          true
+                                        );
+                                        handleSearchProduct(getSearch);
+                                      }}
+                                    >
+                                      <span className="w-4 h-4">
+                                        <IconComponent
+                                          src={"/icons/search.svg"}
+                                        />
+                                      </span>
+                                      <span className="medium-xs">
+                                        {t("LabelsearchBarDropdownCarisemuaproduk")} <b>{getSearch}</b>
+                                      </span>
+                                    </div>
+                                  </li>
+                                  <li>
+                                    <div
+                                      className="py-2 px-4 flex items-center gap-2 cursor-pointer"
+                                      onClick={() => {
+                                        productFilter?.setFilterProduct(
+                                          "alias",
+                                          true
+                                        );
+                                        handleSearchProduct(getSearch, true);
+                                      }}
+                                    >
+                                      <IconComponent
+                                        src={"/icons/search.svg"}
+                                      />
+                                      <span className="medium-xs">
+                                        {t("LabelsearchBarDropdownCarisemuaprodukdanprodukdenganalias")} <b>“{getSearch}”</b>
+                                      </span>
+                                    </div>
+                                  </li>
+                                </ul>
+                              </div>
+                            )}
+                            {!!(
+                              !data?.Data?.products?.length &&
+                              !getSearch &&
+                              history_search?.Data?.length
+                            ) && (
+                              <>
+                                <div className="flex w-full justify-between items-center">
+                                  <p className="font-bold text-sm text-neutral-900">
+                                    {/* 25. 11 - QC Plan - Web - Ronda Live Mei - LB - 0063 */}
+                                    {t("LabelsearchBarDropdownTerakhirDicari")}
+                                  </p>
+                                  <span
+                                    onClick={handleDeletehistoryAll}
+                                    className="select-none font-bold text-[10px] text-error-400 cursor-pointer"
+                                  >
+                                    {t("LabelsearchBarDropdownHapusSemua")}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {!!history_search?.Data?.length &&
+                                    history_search?.Data?.map((val, i) => {
+                                      return (
+                                        <Bubble
+                                          key={i}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSearch(val);
+                                            handleInputSearch(val);
+                                          }}
+                                          iconRight={
+                                            <span
+                                              className="cursor-pointer"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeletehistory(val);
+                                              }}
+                                            >
+                                              <IconComponent
+                                                src={"/icons/closes.svg"}
+                                                width={10}
+                                                height={10}
+                                                classname={style.iconCloseBlack}
+                                              />
+                                            </span>
+                                          }
+                                          classname="bg-warning-100 text-warning-900 border-none py-[6px] px-3 gap-1 font-semibold select-none"
+                                        >
+                                          {val}
+                                        </Bubble>
+                                      );
+                                    })}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          {!!(
+                            !data?.Data?.products?.length &&
+                            !getSearch &&
+                            banner_search?.Data?.Image
+                          ) && (
+                            <div className="w-full flex flex-col gap-3">
+                              <p className="font-bold text-sm text-neutral-900">
+                                {t("LabelsearchBarDropdownPromoyangpalingbanyakdicari")}
+                              </p>
+                              {banner_search?.Data?.Image && (
+                                <CustomLink
+                                  href={banner_search?.Data?.Url}
+                                  className="w-full "
+                                >
+                                  <ImageComponent
+                                    src={banner_search?.Data?.Image}
+                                    width={600}
+                                    height={140}
+                                    alt="banner"
+                                    className="rounded-lg"
+                                  />
+                                </CustomLink>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <span
+                  onClick={() => setModal("show_tips")}
+                  className="flex items-center gap-1 cursor-pointer"
+                >
+                  <Image
+                    src={
+                      process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                      "/icons/tips-white.svg"
+                    }
+                    alt="tips"
+                    width={16}
+                    height={16}
+                  />
+                  <span className="text-neutral-50 text-[10px] font-medium">
+                    {t("linkTips")}
+                  </span>
+                </span>
+
+                <CustomLink
+                  href={
+                    props?.isLogin
+                      ? "/garasi"
+                      : process.env.NEXT_PUBLIC_INTERNAL_WEB +
+                        `login?from=mpbuyer&redirect=${window.location.href}`
+                  }
+                  className="flex items-center bg-white p-2 rounded-md h-8"
+                >
+                  <Image
+                    src={
+                      process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                      "/icons/garasi.svg"
+                    }
+                    alt="garasi"
+                    width={16}
+                    height={16}
+                  />
+                  <span className="ml-2 text-neutral-900 text-xs font-medium">
+                    {t("buttonGarasiSaya")}
+                  </span>
+                </CustomLink>
+                {props?.isLogin && (
+                  <div className="flex items-center gap-3 pr-3">
+                    <span
+                      className="relative cursor-pointer"
+                      onClick={() => {
+                        router.push("/troli");
+                      }}
+                    >
+                      <Image
+                        src={
+                          process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                          "/icons/cart.svg"
+                        }
+                        width={24}
+                        height={24}
+                        alt="cart"
+                      />
+                      {!!headerCount?.cartItemsCount && (
+                        <div className="bg-error-500 border border-neutral-50 rounded-[30px] font-medium text-[8px] text-neutral-50 p-[2px] px-[6px] flex text-center absolute -top-[8px] -right-[5px] w-fit">
+                          {headerCount?.cartItemsCount}
+                        </div>
+                      )}
+                    </span>
+                    <span
+                      className="relative cursor-pointer"
+                      onClick={() =>
+                        router.push(
+                          `${
+                            process.env.NEXT_PUBLIC_CHAT_URL
+                          }initiate?accessToken=${
+                            authZustand.getState().accessToken
+                          }&refreshToken=${
+                            authZustand.getState().refreshToken
+                          }&initiatorRole=buyer`
+                        )
+                      }
+                    >
+                      <Image
+                        src={
+                          process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                          "/icons/messages-header.svg"
+                        }
+                        width={24}
+                        height={24}
+                        alt="cart"
+                      />
+                      {!!headerCount?.unreadChatCount && (
+                        <div className="absolute text-[8px] font-bold text-neutral-200 w-fit h-fit py-[1px] px-[6px] bg-error-500 border-2 border-neutral-200 rounded-full -top-1 left-[14px]">
+                          {headerCount?.unreadChatCount}
+                        </div>
+                      )}
+                    </span>
+                    <CustomLink
+                      href={
+                        process.env.NEXT_PUBLIC_INTERNAL_WEB + "notifikasi-new"
+                      }
+                      className="relative cursor-pointer"
+                    >
+                      <Image
+                        src={
+                          process.env.NEXT_PUBLIC_ASSET_REVERSE +
+                          "/icons/notification-header.svg"
+                        }
+                        width={24}
+                        height={24}
+                        alt="cart"
+                      />
+                      {!!headerCount?.unreadNotifications && (
+                        <div className="bg-error-500 border border-neutral-50 rounded-[30px] font-medium text-[8px] text-neutral-50 p-[2px] px-[6px] flex text-center absolute -top-[8px] -right-[5px] w-fit">
+                          {headerCount?.unreadNotifications}
+                        </div>
+                      )}
+                    </CustomLink>
+                  </div>
+                )}
+
+                <div className="w-px h-8 bg-white" />
+
+                <CustomLink
+                  href={sellerLink}
+                  className="px-6 py-2 bg-[#002C84] rounded-3xl text-neutral-50 text-sm font-semibold flex gap-1 whitespace-nowrap"
+                >
+                  <IconComponent src={"/icons/Plus.svg"} />
+                  <p>{t("buttonJualProduk")}</p>
+                </CustomLink>
+              </div>
+            ) : (
+              renderAppBar
+            )}
+          </div>
+          {!renderAppBar && (
+            <div className="w-full flex bg-primary-700 pt-7 px-10">
+              <div className="w-full max-w-7xl mx-auto flex justify-between items-end">
+                <div
+                  className="w-[137px] h-7 bg-muat-parts-non-800 py-[6px] px-4 rounded-tr-md rounded-tl-md flex items-center gap-2 cursor-pointer"
+                  onClick={() => setModal(getModal ? "" : "show_category")}
+                >
+                  <IconComponent src={"/icons/kategori.svg"} />
+                  <p className="font-semibold text-sm text-neutral-50">
+                    {t("titleheaderKategoriBuyer")}
+                  </p>
+                  <IconComponent
+                    classname={"icon-white"}
+                    src={"/icons/chevron-down.svg"}
+                  />
+                </div>
+                <div
+                  className=" w-auto max-w-[274px] h-7 bg-muat-parts-non-800 py-[6px] px-4 rounded-tr-md rounded-tl-md flex items-center cursor-pointer gap-2"
+                  onClick={() => setModal("show_location")}
+                >
+                  <IconComponent
+                    classname={"icon-white"}
+                    src={"/icons/lokasi.svg"}
+                    width={24}
+                  />
+                  <p className="font-semibold text-sm text-neutral-50 w-full max-w-[194px] line-clamp-1">
+                    {t("titleDikirimKeHeaderBuyer")}:{" "}
+                    {manlok?.selectedLocation.City ?? "Surabaya"}
+                  </p>
+                  <IconComponent
+                    classname={"icon-white"}
+                    src={"/icons/chevron-down.svg"}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      }
+    </header>
+  );
+}
+
+export default ProtectComponent(HeaderContainerWeb);

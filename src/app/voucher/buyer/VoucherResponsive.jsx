@@ -1,0 +1,238 @@
+"use client";
+import React, { useEffect, useMemo, useState } from "react";
+
+import { customFetcherBuyer } from "@/utils/customFetcher";
+import useSWR from "swr";
+import VoucherCardMobile from "@/components/VoucherMobile/VoucherCardMobile";
+import { useHeader } from '@/common/ResponsiveContext';
+import IconComponent from '@/components/IconComponent/IconComponent';
+import Image from 'next/image';
+import Button from "@/components/Button/Button";
+import VoucherSeller from "@/components/VoucherMobile/VoucherSeller";
+
+// LB 25.11  0345
+import { useCustomRouter } from "@/libs/CustomRoute";
+
+const fetcher = async filterParams => {
+	const params = new URLSearchParams(filterParams);
+	return customFetcherBuyer(
+		`${process.env.NEXT_PUBLIC_GLOBAL_API}v1/muatparts/voucher/voucher-list?${params}`,
+		{
+			method: "GET",
+		}
+	);
+};
+
+// LBM
+
+const VoucherBuyer = () => {
+
+	const {
+		setAppBar, // tambahkan payload seperti ini setAppBar({onBack:()=>setScreen('namaScreen'),title:'Title header',appBarType:'type'})
+		setSearch, // tambahkan payload seperti ini {placeholder:'Pencarian',value:'',type:'text'}
+		search
+	}=useHeader();
+
+	const router = useCustomRouter();
+
+	const [filterParams, setFilterParams] = useState({
+		kode: search?.value,
+		type: "my-voucher",
+		orderBy: "claimed_at",
+		orderMode: "", 
+		products_ids: [],
+	});
+
+	const type = [
+		{value: "all", label: "Semua"},
+		{value: "muatparts", label: "Muatpart"},
+		{value: "seller", label: "Penjual"},
+	];
+
+	const category = [
+		{value: "diskon-pengiriman", label: "Voucher Gratis Ongkir"},
+		{value: "diskon-produk", label: "Voucher Transaksi"},
+	];
+
+	const [vouchers, setVouchers] = useState([]);
+	const [selectedVoucherType, setSelectedVoucherType] = useState("all");
+	const [selectedVoucherCategory, setSelectedVoucherCategory] = useState("diskon-pengiriman");
+
+	const { data } = useSWR(["voucher/buyer", filterParams], ([_, params]) =>
+		fetcher(params)
+	);
+
+	useEffect(() => {
+		setAppBar({
+			appBarType:'header_search',
+			onSubmit: true,
+			bottomTabNavigation:true,
+			renderActionButton:(
+			<div className='gap-2 flex items-center'>
+              <span className='flex flex-col gap-[2px] z-30 select-none cursor-pointer items-center' onClick={handleSort}>
+                <IconComponent src={'/icons/urutkan.svg'} width={24} height={24}/>
+                <span className='font-semibold text-neutral-50 text-[10px] text-center'>Urutkan</span>
+              </span>
+            </div>
+			)
+		  })
+		  setSearch({
+			placeholder:'Cari Voucher',
+			onSubmitForm: true
+		})
+	}, []);
+
+	useEffect(() => {
+		setFilterParams({...filterParams, kode: search?.value});
+	}, [search.value]);
+
+	useEffect(() => {
+		if (data) {
+			const arr = {
+				"diskon-pengiriman": data.Data["diskon-pengiriman"],
+				"diskon-produk": data.Data["diskon-produk"],
+				"total": ((data.Data["diskon-pengiriman"]?.length ?? 0) + (data.Data["diskon-produk"]?.length ?? 0))
+			};
+
+			setVouchers({
+				seller: arr,
+				muatparts: {
+					"diskon-pengiriman": [],
+					"diskon-produk": [],
+					"total": 0
+				},
+                all: {
+                    "diskon-pengiriman": [...arr?.["diskon-pengiriman"]],
+                    "diskon-produk": [...arr?.["diskon-produk"]],
+                    "total": arr?.["diskon-produk"]?.length + arr?.["diskon-pengiriman"]?.length
+                }
+			});
+		}
+	}, [data]);
+
+	const handleSort = () => {
+		setFilterParams(prev => ({
+			...prev,
+			orderMode: prev.orderMode === "desc" ? "asc" : "desc",
+		}));
+	};
+
+	const voucherTypeCounts = useMemo(() => ({
+		seller: vouchers["seller"]?.total ?? 0,
+		muatparts: vouchers["muatparts"]?.total ?? 0,
+		all: (vouchers["seller"]?.total ?? 0) + (vouchers["muatparts"]?.total ?? 0)
+	}), [vouchers]);
+
+	const voucherCategoryCount = useMemo(() => ({
+		seller: {
+			"diskon-pengiriman": vouchers?.seller?.["diskon-pengiriman"]?.length ?? 0,
+			"diskon-produk": vouchers?.seller?.["diskon-produk"]?.length ?? 0,
+		},
+		muatparts: {
+			"diskon-pengiriman": vouchers?.muatparts?.["diskon-pengiriman"]?.length ?? 0,
+			"diskon-produk": vouchers?.muatparts?.["diskon-produk"]?.length ?? 0,				
+		},
+		all: {
+			"diskon-pengiriman": (vouchers?.seller?.["diskon-pengiriman"]?.length ?? 0)  + (vouchers?.muatparts?.["diskon-pengiriman"]?.length ?? 0),
+			"diskon-produk": (vouchers?.seller?.["diskon-produk"]?.length ?? 0) + (vouchers?.muatparts?.["diskon-produk"].length ?? 0),				
+		},
+	}), [vouchers]);
+
+	const handleUseVoucher = () => {
+		router.push("/troli");
+	}
+
+	return (
+		<>
+			<div className="min-h-[calc(100vh-88px)] pt-4">
+                <div className="flex flex-col h-full">
+					<div className="flex justify-between items-center gap-1">
+						{
+							type.map((item, index) => (
+								<React.Fragment
+									key={`type-${index}`}
+								>
+									<div className={`px-[4px] py-[10px] flex flex-1 justify-center 
+										${item.value === selectedVoucherType && "border-b-[3px] border-muat-parts-non-800"} hover:cursor-pointer`}
+										onClick={() => {
+											setSelectedVoucherType(item.value);
+										}}
+									>
+										<label className={`bold-sm hover:cursor-pointer 
+											${item.value === selectedVoucherType ? "text-muat-parts-non-800" : "text-neutral-700"}`}>
+											{item.label} ({voucherTypeCounts[item.value]})
+										</label>
+									</div>
+									{
+										index >= 0 && index < type.length - 1 && (
+											<div className="h-[20px] w-[1px] bg-neutral-400"></div>
+										)
+									}
+								</React.Fragment>
+							))
+						}
+					</div>
+					<div className="flex gap-1 items-center p-4 overflow-x-scroll scrollbar-none">
+						{
+							category.map((item, index) => (
+								<div className="min-w-fit" key={`category-${index}`}>
+									<Button
+                                        onClick={() => setSelectedVoucherCategory(item.value)}
+                                        Class="!font-medium !px-3 !py-2"
+                                        color={`${item.value === selectedVoucherCategory ? "primary_secondary" : "primary_secondary_disabled"}`}>
+                                        {item.label} ({voucherCategoryCount?.[selectedVoucherType]?.[item.value] ?? 0})
+                                    </Button>
+								</div>
+							))
+						}
+					</div>
+				</div>
+				{/* 24. TAHAP 2-MOD0001-MP-024-QC PLAN-Web-Muatparts-Voucher Buyer LB - 0039*/}
+				
+				<div className={`bg-[#f8f8f8] flex flex-col gap-2 w-full pt-2 px-4 min-h-[calc(100vh-238px)] pb-28 ${
+					vouchers[selectedVoucherType]?.[selectedVoucherCategory]?.length > 0 ? "" : "justify-center items-center"
+				}`}>
+					{
+						selectedVoucherType !== "all" ? (
+							vouchers[selectedVoucherType]?.[selectedVoucherCategory]?.length > 0 ? (
+								vouchers[selectedVoucherType]?.[selectedVoucherCategory]?.map((voucher, index) => (
+									<VoucherCardMobile
+										type="my-voucher"
+										key={`${voucher.uuid}-${index}`}
+										voucher={voucher}
+										handleClick={handleUseVoucher}
+									/>
+								))
+							) : (
+								<div className="flex flex-col gap-3 items-center">
+									<Image src="/img/daftarprodukicon.png" width={95} height={76} alt="vouchernotfound"/>
+									<label className="text-neutral-600 semi-base">Belum ada Voucher</label>
+								</div>
+							)
+						) : <>
+							{
+								vouchers.seller?.[selectedVoucherCategory]?.length > 0 ? (
+									vouchers.seller?.[selectedVoucherCategory]?.map((voucher, index) => (
+										<VoucherCardMobile
+											type="my-voucher"
+											key={`${voucher.uuid}-${index}`}
+											voucher={voucher}
+											handleClick={handleUseVoucher}
+										/>
+									))
+								) : (
+									<div className="flex flex-col gap-3 items-center">
+										<Image src="/img/daftarprodukicon.png" width={95} height={76} alt="vouchernotfound"/>
+										<label className="text-neutral-600 semi-base">Belum ada Voucher</label>
+									</div>
+								)
+							}
+						</>
+					}
+				</div>
+			</div>
+		</>
+	);
+};
+
+export default VoucherBuyer;

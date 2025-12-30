@@ -1,0 +1,26 @@
+[
+    {
+        "text":"Lakukan pembayaran sebelum",
+        "date":"20 Sep 2024 13:00 WIB",
+        "bg":"error-50",
+        "textColor":"error-400"
+    },
+    {
+        "text":"Pesanan akan dikirim sebelum",
+        "date":"20 Sep 2024 13:00 WIB",
+        "bg":"primary-50",
+        "textColor":"primary-700"
+    },
+    {
+        "text":"Pesanan telah diterima",
+        "date":"20 Sep 2024 13:00 WIB",
+        "bg":"success-50",
+        "textColor":"error-400"
+    },
+    {
+        "text":"Lakukan pembayaran sebelum",
+        "date":"20 Sep 2024 13:00 WIB",
+        "bg":"neutral-50",
+        "textColor":"neutral-900"
+    }
+]

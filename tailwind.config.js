@@ -1,0 +1,246 @@
+
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/**/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/container/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      screens: {
+        xs: { max: "360px" },
+        sm: { max: "600px" },
+        md: { max: "1023px" },
+      },
+      colors: {
+        neutral: {
+          50: "#ffffff",
+          100: "#f5f5f5",
+          200: "#f1f1f1",
+          300: "#d9d9d9",
+          400: "#c4c4c4",
+          500: "#9d9d9d",
+          600: "#7b7b7b",
+          700: "#555555",
+          800: "#434343",
+          900: "#000000",
+        },
+        success: {
+          50: "#e3f5ed",
+          100: "#bae6d1",
+          200: "#8cd6b5",
+          300: "#54c797",
+          400: "#0fbb81",
+          500: "#00af6c",
+          600: "#00a061",
+          700: "#008d54",
+          800: "#007c47",
+          900: "#005d31",
+        },
+        // Warning
+        warning: {
+          50: "#fffde6",
+          100: "#fff9c1",
+          200: "#fff597",
+          300: "#fff06c",
+          400: "#ffeb47",
+          500: "#fee61a",
+          600: "#ffd920",
+          700: "#FFA700",
+          800: "#fe900f",
+          900: "#fe700d",
+        },
+        error: {
+          50: "#ffe9ed",
+          100: "#ffc9ce",
+          200: "#f09393",
+          300: "#e56869",
+          400: "#ee4343",
+          500: "#f22c25",
+          600: "#e31f25",
+          700: "#d20f20",
+          800: "#c50018",
+          900: "#b5000b",
+        },
+        primary: {
+          50: "#e2f2ff",
+          100: "#b9ddff",
+          200: "#7eafff",
+          300: "#52b2ff",
+          400: "#1aa0ff",
+          500: "#008fff",
+          600: "#0080ff",
+          700: "#176cf7",
+          800: "#1257c6",
+          900: "#0c377c",
+        },
+        secondary: {
+          50: "#fff8e1",
+          100: "#ffecb4",
+          200: "#ffe084",
+          300: "#ffd552",
+          400: "#ffca2e",
+          500: "#ffc117",
+          600: "#ffb311",
+          700: "#fea010",
+          800: "#fe900f",
+          900: "#fe700d",
+        },
+        "buyer-seller": {
+          50: "#e8ebf7",
+          100: "#c4cdeb",
+          200: "#9daddd",
+          300: "#758ccf",
+          400: "#5573c5",
+          500: "#325abb",
+          600: "#2b52b1",
+          700: "#2048a5",
+          800: "#163e99",
+          900: "#176cf7",
+        },
+        "muat-parts-member": {
+          50: "#f6e6e8",
+          100: "#eac0c3",
+          200: "#cb8683",
+          300: "#b35956",
+          400: "#b43832",
+          500: "#b02316",
+          600: "#a31a17",
+          700: "#931012",
+          800: "#86090c",
+          900: "#770000",
+        },
+        "muat-parts-non": {
+          50: "#ffeaec",
+          100: "#ffcccd",
+          200: "#ef9892",
+          300: "#e47168",
+          400: "#ec5241",
+          500: "#ef4422",
+          600: "#e03923",
+          700: "#cf2e1d",
+          800: "#c22716",
+          900: "#b31b06",
+        },
+        "muat-trans": {
+          50: "#f8f8f0",
+          100: "#f0f0e8",
+          200: "#e5e5dd",
+          300: "#d4d4cc",
+          400: "#afafa7",
+          500: "#8f8f87",
+          600: "#676760",
+          700: "#54544d",
+          800: "#36362f",
+          900: "#770000",
+        },
+      },
+      boxShadow: {
+        'muatmuat': '0px 4px 11px 0px rgba(65, 65, 65, 0.25)'
+      },
+      keyframes: {
+        skeleton: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+      },
+      animation: {
+        skeleton: 'skeleton 1.5s ease-in-out infinite',
+      },
+    },
+  },
+  plugins: [
+    require("tailwind-scrollbar"),
+    function ({ addBase, theme }) {
+      addBase({
+        ":root": {
+          // Neutral
+          "--neutral-50": theme("colors.neutral.50"),
+          "--neutral-100": theme("colors.neutral.100"),
+          "--neutral-200": theme("colors.neutral.200"),
+          "--neutral-300": theme("colors.neutral.300"),
+          "--neutral-400": theme("colors.neutral.400"),
+          "--neutral-500": theme("colors.neutral.500"),
+          "--neutral-600": theme("colors.neutral.600"),
+          "--neutral-700": theme("colors.neutral.700"),
+          "--neutral-800": theme("colors.neutral.800"),
+          "--neutral-900": theme("colors.neutral.900"),
+
+          // Primary
+          "--primary-50": theme("colors.primary.50"),
+          "--primary-100": theme("colors.primary.100"),
+          "--primary-200": theme("colors.primary.200"),
+          "--primary-300": theme("colors.primary.300"),
+          "--primary-400": theme("colors.primary.400"),
+          "--primary-500": theme("colors.primary.500"),
+          "--primary-600": theme("colors.primary.600"),
+          "--primary-700": theme("colors.primary.700"),
+          "--primary-800": theme("colors.primary.800"),
+          "--primary-900": theme("colors.primary.900"),
+
+          // Secondary
+          "--secondary-50": theme("colors.secondary.50"),
+          "--secondary-100": theme("colors.secondary.100"),
+          "--secondary-200": theme("colors.secondary.200"),
+          "--secondary-300": theme("colors.secondary.300"),
+          "--secondary-400": theme("colors.secondary.400"),
+          "--secondary-500": theme("colors.secondary.500"),
+          "--secondary-600": theme("colors.secondary.600"),
+          "--secondary-700": theme("colors.secondary.700"),
+          "--secondary-800": theme("colors.secondary.800"),
+          "--secondary-900": theme("colors.secondary.900"),
+
+          // Error
+          "--error-50": theme("colors.error.50"),
+          "--error-100": theme("colors.error.100"),
+          "--error-200": theme("colors.error.200"),
+          "--error-300": theme("colors.error.300"),
+          "--error-400": theme("colors.error.400"),
+          "--error-500": theme("colors.error.500"),
+          "--error-600": theme("colors.error.600"),
+          "--error-700": theme("colors.error.700"),
+          "--error-800": theme("colors.error.800"),
+          "--error-900": theme("colors.error.900"),
+
+          // Success
+          "--success-50": theme("colors.success.50"),
+          "--success-100": theme("colors.success.100"),
+          "--success-200": theme("colors.success.200"),
+          "--success-300": theme("colors.success.300"),
+          "--success-400": theme("colors.success.400"),
+          "--success-500": theme("colors.success.500"),
+          "--success-600": theme("colors.success.600"),
+          "--success-700": theme("colors.success.700"),
+          "--success-800": theme("colors.success.800"),
+          "--success-900": theme("colors.success.900"),
+
+          // Warning
+          "--warning-50": theme("colors.warning.50"),
+          "--warning-100": theme("colors.warning.100"),
+          "--warning-200": theme("colors.warning.200"),
+          "--warning-300": theme("colors.warning.300"),
+          "--warning-400": theme("colors.warning.400"),
+          "--warning-500": theme("colors.warning.500"),
+          "--warning-600": theme("colors.warning.600"),
+          "--warning-700": theme("colors.warning.700"),
+          "--warning-800": theme("colors.warning.800"),
+          "--warning-900": theme("colors.warning.900"),
+
+          // Add other color sets as needed...
+        },
+      });
+    },
+    function({ addComponents }) {
+      addComponents({
+        '.skeleton': {
+          backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%)',
+          backgroundSize: '200% 100%',
+          borderRadius: '0.75rem',
+        },
+      })
+    },
+
+  ],
+};

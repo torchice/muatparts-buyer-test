@@ -1,0 +1,276 @@
+// Seller.jsx
+"use client";
+
+import { viewport } from "@/store/viewport";
+import SellerWeb from "./SellerWeb";
+import SellerResponsive from "./SellerResponsive";
+import { useState, useEffect, useMemo } from "react";
+import SWRHandler from "@/services/useSWRHook";
+import { notFound, useParams } from "next/navigation";
+import axios from "axios";
+import { authZustand } from "@/store/auth/authZustand";
+import useImmediateIntervalEffect from "@/libs/useImmediateIntervalEffect";
+import { userZustand } from "@/store/auth/userZustand";
+import { useLanguage } from "@/context/LanguageContext";
+// 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+import useSellerStore from "@/store/seller";
+
+const baseUrl = `${process.env.NEXT_PUBLIC_GLOBAL_API}v1/`;
+
+export const customFetcherGet = (url) => {
+  return axios({
+    headers:{
+      "Authorization":`Bearer ${authZustand.getState().accessToken}`,
+      "refreshToken":authZustand.getState().refreshToken
+    },
+    url,
+  })
+}
+
+function Seller() {
+  const [isEtalasePage, setIsEtalasePage] = useState(false)
+  const { isMobile } = viewport();
+  const params = useParams()
+  const { t } = useLanguage();
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+  const {
+    activeTab,
+    appendProductByEtalase,
+    appendReviews,
+    filter,
+    resetFilter,
+    setActiveTab,
+    setFilter,
+    setProductByEtalase,
+    setReviews,
+    setSearch
+  } = useSellerStore();
+
+  const [selectedEtalase, setSelectedEtalase] = useState(null);
+  const user = userZustand()
+
+  const productsParams = useMemo(() => {
+    const params = []
+    params.push(`page=1`)
+    // LBM - OLIVER - FIX NAMA PARAM - MP - 020
+    params.push(`size=10`)
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+    if (filter.searchQuery) {
+      params.push(`productName=${filter.searchQuery}`)
+    }
+    return params.join("&")
+  }, [filter.searchQuery])
+
+  const productsByEtalaseParams = useMemo(() => {
+    const params = []
+    params.push(`page=${filter.page}`)
+    // LBM - OLIVER - FIX NAMA PARAM - MP - 020
+    params.push(`size=${isMobile ? 10 : 20}`)
+    if (selectedEtalase && selectedEtalase.id !== "semua") {
+      params.push(`etalase=${selectedEtalase.id}`)
+    }
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+    if (filter.searchQuery) {
+      params.push(`productName=${filter.searchQuery}`)
+    }
+    if (filter.sort === "newest") {
+      params.push(`sort=terbaru`)
+      params.push(`order=DESC`)
+    }
+    if (filter.sort === "oldest") {
+      params.push(`sort=terbaru`)
+      params.push(`order=ASC`)
+    }
+    return params.join("&")
+  }, [JSON.stringify(selectedEtalase), filter.page, filter.searchQuery, filter.sort])
+
+  const reviewsParams = useMemo(() => {
+    const params = []
+    params.push(`page=${filter.page}`)
+    // LBM - OLIVER - FIX NAMA PARAM - MP - 020
+    params.push(`size=${isMobile ? 10 : 10}`)
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+    if (filter.searchQuery) {
+      params.push(`search=${filter.searchQuery}`)
+    }
+    if (filter.sort === "newest") {
+      params.push(`sort=createdAt`)
+      params.push(`order=DESC`)
+    }
+    if (filter.sort === "oldest") {
+      params.push(`sort=createdAt`)
+      params.push(`order=ASC`)
+    }
+    if (filter.sort === "highest") {
+      params.push(`sort=rating`)
+      params.push(`order=DESC`)
+    }
+    if (filter.sort === "lowest") {
+      params.push(`sort=rating`)
+      params.push(`order=ASC`)
+    }
+    if (filter.rating.length > 0) {
+      filter.rating.forEach((item, key) => params.push(`rating[${key}]=${item}`))
+    }
+    if (filter.withMedia) {
+      params.push(`withMedia=true`)
+    }
+    return params.join("&")
+  }, [JSON.stringify(filter)])
+
+  const { useSWRHook } = SWRHandler();
+  const { data: dataSellerProfile, error: errorSellerProfile, isLoading: isLoadingSellerProfile, mutate: mutateSellerProfile } = useSWRHook(
+    `${baseUrl}stores/${params.id}`,
+    customFetcherGet
+  );
+  const { data: dataSellerVoucher, isLoading: isLoadingSellerVoucher, mutate: mutateSellerVoucher } = useSWRHook(
+    (((activeTab === 0 && !isMobile) || isMobile) && user?.id) ? `v1/muatparts/voucher-buyer/${params.id}?page=1&page_size=10` : null,
+  );
+  const { data: dataProductByBestSeller, isLoading: isLoadingProductByBestSeller } = useSWRHook(
+    activeTab === 0 ? `${baseUrl}stores/${params.id}/products?sort=terlaris&order=DESC&${productsParams}` : null,
+    customFetcherGet
+  );
+  const { data: dataProductByFavorite, isLoading: isLoadingProductByFavorite } = useSWRHook(
+    activeTab === 0 ? `${baseUrl}stores/${params.id}/products?sort=terfavorit&order=DESC&${productsParams}` : null,
+    customFetcherGet
+  );
+  const { data: dataProductByNewest, isLoading: isLoadingProductByNewest } = useSWRHook(
+    activeTab === 0 ? `${baseUrl}stores/${params.id}/products?sort=terbaru&order=DESC&${productsParams}` : null,
+    customFetcherGet
+  );
+
+  const { data: dataEtalase, isLoading: isLoadingEtalase } = useSWRHook(
+    activeTab === 1 ? `${baseUrl}stores/${params.id}/etalase` : null,
+    customFetcherGet
+  )
+
+  const { data: dataProductByEtalase, isLoading: isLoadingProductByEtalase } = useSWRHook(
+    (isMobile ? activeTab === 1 && isEtalasePage : activeTab === 1) ? `${baseUrl}stores/${params.id}/products?${productsByEtalaseParams}` : null,
+    customFetcherGet
+  );
+
+  const { data: dataReviews, isLoading: isLoadingReviews } = useSWRHook(
+    activeTab === 2 ? `${baseUrl}stores/${params.id}/reviews?${reviewsParams}` : null,
+    customFetcherGet
+  );
+  const isNotFound = errorSellerProfile?.status === 404
+  const sellerProfile = !errorSellerProfile && dataSellerProfile?.data && dataSellerProfile?.data.Data
+
+  const sellerVouchers = dataSellerVoucher?.Data ? dataSellerVoucher.Data : []
+  const productByBestSeller = dataProductByBestSeller?.data ? dataProductByBestSeller.data.Data.products : []
+  const productByFavorite = dataProductByFavorite?.data ? dataProductByFavorite.data.Data.products : []
+  const productByNewest = dataProductByNewest?.data ? dataProductByNewest.data.Data.products : []
+
+  const etalase = [{ id: "semua", title: t("buttonAllProducts") }, ...(dataEtalase?.data ? dataEtalase.data.Data : [])]
+  const productByEtalasePagination = dataProductByEtalase?.data ? dataProductByEtalase.data.Data.pagination : {}
+
+  const reviewsPagination = dataReviews?.data ? dataReviews.data.Data.pagination : {}
+
+  const isLoadingTabOne = isLoadingProductByBestSeller || isLoadingProductByFavorite || isLoadingProductByNewest
+  const isLoadingTabTwo = isLoadingEtalase || isLoadingProductByEtalase
+  const isLoadingTabThree = isLoadingReviews
+
+  useImmediateIntervalEffect(mutateSellerProfile, 30000)
+
+  // 24. THP 2 - MOD001 - MP - 020 - QC Plan - Web - MuatParts - Profil Seller Sisi Buyer - LB - 0051
+  useEffect(() => {
+    if (isMobile) {
+      // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+      if (dataProductByEtalase?.data) {
+        appendProductByEtalase(dataProductByEtalase.data.Data.products)
+      }
+    } else {
+      setProductByEtalase(dataProductByEtalase?.data ? dataProductByEtalase.data.Data.products : [])
+    }
+  }, [JSON.stringify(dataProductByEtalase)])
+
+  useEffect(() => {
+    if (isMobile) {
+      // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+      if (dataReviews?.data) {
+        appendReviews(dataReviews.data.Data.reviews)
+      }
+    } else {
+      setReviews(dataReviews?.data ? dataReviews.data.Data.reviews : [])
+    }
+  }, [JSON.stringify(dataReviews)])
+
+  useEffect(() => {
+    if (etalase.length > 0) {
+        setSelectedEtalase(etalase[0])
+    }
+}, [JSON.stringify(etalase)])
+
+  // 24. THP 2 - MOD001 - MP - 020 - QC Plan - Web - MuatParts - Profil Seller Sisi Buyer - LB - 0051
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+  const handleLoadMore = () => setFilter({ page: filter.page + 1 })
+
+  const handleChangeTab = (value) => {
+    // LBM - OLIVER - FIX TIDAK BOLEH PINDAH TAB SEBELUM PROFIL SELLER SELESAI LOADING - MP - 020
+    if (isLoadingSellerProfile) {
+      return;
+    }
+    setActiveTab(value)
+    setSelectedEtalase(etalase[0])
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+    setSearch("")
+    resetFilter()
+    setProductByEtalase([])
+    setReviews([])
+  }
+
+  const handleRefreshVoucher = () => mutateSellerVoucher();
+
+  if (typeof isMobile !== "boolean") return null;
+
+  const sharedProps = {
+    onChangeTab: handleChangeTab,
+    onRefreshVoucher: handleRefreshVoucher,
+
+    // DATA DARI API
+    // LBM - OLIVER - PASSING STATE LOADING UNTUK SKELETON - MP - 020
+    isLoadingSellerProfile,
+    isLoadingProductByBestSeller,
+    isLoadingProductByFavorite,
+    isLoadingProductByNewest,
+    isLoadingTabOne,
+    isLoadingProductByEtalase,
+    isLoadingTabTwo,
+    isLoadingTabThree,
+    sellerProfile,
+    // TAB ONE
+    sellerVouchers,
+    productByBestSeller,
+    productByFavorite,
+    productByNewest,
+    // TAB TWO
+    etalase,
+    productByEtalasePagination,
+    // TAB THREE
+    reviewsPagination,
+
+    // Etalase
+    selectedEtalase,
+    setSelectedEtalase
+  };
+
+  if (isNotFound) {
+    return notFound()
+  }
+
+  return isMobile ? (
+    <SellerResponsive
+      {...sharedProps}
+      // 24. THP 2 - MOD001 - MP - 020 - QC Plan - Web - MuatParts - Profil Seller Sisi Buyer - LB - 0051
+      isEtalasePage={isEtalasePage}
+      setIsEtalasePage={setIsEtalasePage}
+      onLoadMore={handleLoadMore}
+      // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0503
+      // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0504
+    />
+  ) : (
+    <SellerWeb {...sharedProps} />
+  );
+}
+
+export default Seller;

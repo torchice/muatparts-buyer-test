@@ -1,0 +1,410 @@
+"use client";
+import PageTitle from "@/components/PageTitle/PageTitle";
+import style from "./IdPesanan.module.scss";
+import BreadCrumb from "@/components/Breadcrumb/Breadcrumb";
+import { useRouter } from "next/navigation";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import { useEffect } from "react";
+import { numberFormatMoney } from "@/libs/NumberFormat";
+import toast from "@/store/toast";
+import InvoiceLabel from "@/components/OrderComponents/InvoiceLabel";
+import ProductItem from "@/components/ProductItem/ProductItem";
+import PaymentGuide from "@/components/PaymentGuide/PaymentGuide";
+import OrderAction from "@/components/OrderComponents/OrderAction";
+import { useOrderDetailStore } from "@/store/order";
+import OrderTimeline from "@/components/OrderComponents/OrderTimeline";
+import StatusCard from "@/components/OrderComponents/StatusCard";
+import PaymentInfo from "@/components/OrderComponents/PaymentInfo";
+import { useCustomRouter } from "@/libs/CustomRoute";
+import BatalkanModal from "@/components/BatalkanModal/BatalkanModal";
+import { useLanguage } from "@/context/LanguageContext";
+import DropshipCard from "@/components/OrderComponents/DropshipCard";
+import PickupCode from "@/components/OrderComponents/PickupCode";
+import IdPesananSkeleton from "./IdPesananSkeleton";
+
+function IdPesananWeb({
+  id,
+  data,
+  orderStatus,
+  mutateIdPesanan,
+  loadingIdPesanan,
+}) {
+  const { t } = useLanguage();
+  const router = useCustomRouter();
+  const { setShowToast, setDataToast } = toast();
+
+  const copyToClipboard = (value, text) => {
+    navigator.clipboard.writeText(value).then(() => {
+      setShowToast(true);
+      setDataToast({
+        message: text,
+        type: "success",
+      });
+    });
+  };
+
+  return (
+    <div className={style.main}>
+      {loadingIdPesanan ? (
+        <IdPesananSkeleton />
+      ) : (
+        <>
+          <BatalkanModal data={data} />
+          <BreadCrumb
+            data={[
+              { name: t("titleHeaderDaftarPesanan"), url: "/daftarpesanan" },
+              {
+                name: `${data.storeOrders?.[0].invoiceNumber} ${
+                  data.storeOrders?.length > 1 ? "..." : ""
+                }`,
+                url: "",
+              },
+              {
+                name: t("AppMuatpartsDaftarPesananBuyerDetailPesanan"),
+                url: "",
+              },
+            ]}
+            // 24. THP 2 - MOD001 - MP - 035 - QC Plan - Web - MuatParts - General - Daftar Pesanan - LB - 0011
+            onclick={(val) => {
+              if (val.url) router.push(val.url);
+            }}
+            maxWidth={"200px"}
+          />
+          <PageTitle
+            title={t("AppMuatpartsDaftarPesananBuyerDetailPesanan")}
+            route="/daftarpesanan"
+          />
+          <StatusCard
+            orderStatus={data.statusInfo?.statusInfoBuyer?.status}
+            title={data.statusInfo?.statusInfoBuyer?.title_text}
+            subtitle={data.statusInfo?.statusInfoBuyer?.subtitle_text}
+          />
+          {data?.storeOrders?.every((item) => item.isDropship) && (
+            <DropshipCard
+              name={data?.storeOrders[0].dropshipName}
+              phone={data?.storeOrders[0].dropshipPhone}
+            />
+          )}
+          <div className="flex gap-4">
+            <div className="w-[846px] space-y-6">
+              {data.storeOrders?.map((order, index) => (
+                <div className="px-8 py-5 shadow-muatmuat rounded-xl text-xs">
+                  <div className="flex justify-between items-start pb-5 border-b border-neutral-400">
+                    <div className="space-y-5">
+                      <div className="flex gap-8">
+                        <div className="min-w-32 text-neutral-600 font-medium">
+                          {t("labelStoreName")}
+                        </div>
+                        {/* 24.⁠ ⁠THP 2 - MOD001 - MP - 035 - QC Plan - Web - MuatParts - General - Daftar Pesanan - LB - 0028 */}
+                        <div className="font-bold">{order.storeName}</div>
+                      </div>
+                      <div className="flex gap-8">
+                        <div className="min-w-32 text-neutral-600 font-medium">
+                          {t("labelDikirimDari")}
+                        </div>
+                        <div className="font-medium capitalize">
+                          {order.shippingOrigin?.toLowerCase()}
+                        </div>
+                      </div>
+                    </div>
+                    <InvoiceLabel invoice={order.invoiceNumber} />
+                  </div>
+                  <div className="space-y-5 mt-3 pb-1">
+                    <div className="flex gap-8">
+                      <div className="min-w-32 text-neutral-600 font-medium">
+                        {t("AppKelolaPesananSellerMuatpartsKurir")}
+                      </div>
+                      <div className="font-medium">
+                        {order.shippingInfo.courier}
+                      </div>
+                    </div>
+                    {orderStatus !== "Menunggu Pembayaran" &&
+                      order.shippingInfo.shippingType !== "takeaway" && (
+                        <div className="flex gap-8">
+                          <div className="min-w-32 text-neutral-600 font-medium">
+                            Nomor Resi
+                          </div>
+                          {/* 24. THP 2 - MOD001 - MP - 035 - QC Plan - Web - MuatParts - General - Daftar Pesanan LB - 0034 */}
+                          {order.shippingInfo.trackingNumber ? (
+                            <button
+                              className="font-bold flex gap-1"
+                              onClick={() =>
+                                copyToClipboard(
+                                  order.shippingInfo.trackingNumber,
+                                  t("AppKomplainBuyerLabelTrackingCopySuccess")
+                                )
+                              }
+                            >
+                              {order.shippingInfo.trackingNumber}
+                              <IconComponent
+                                src={"/icons/copy-outline.svg"}
+                                width={16}
+                                height={16}
+                              />
+                            </button>
+                          ) : (
+                            "-"
+                          )}
+                        </div>
+                      )}
+                    <div className="flex gap-8">
+                      <div className="min-w-32 text-neutral-600 font-medium flex-shrink-0">
+                        {t("AppKelolaPesananSellerMuatpartsAlamatPengiriman")}
+                      </div>
+                      <div className="space-y-1 font-medium flex-grow min-w-0 break-words">
+                        {/* PRIO : 8 - 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - Prio 8 - LB - 0168 */}
+                        <div className="font-bold">
+                          {order.shippingInfo.recipientAddressName}
+                        </div>
+                        <div className="">
+                          {order.shippingInfo.recipientName} (
+                          {order.shippingInfo.recipientPhone})
+                        </div>
+                        <div className=""></div>
+                        <div className="">
+                          {order.shippingInfo.recipientAddress}
+                        </div>
+                        {/* 24. THP 2 - MOD001 - MP - 035 - QC Plan - Web - MuatParts - General - Daftar Pesanan LB - 0029  */}
+                        {order.shippingInfo.recipientAddressDetail && (
+                          <div className="">
+                            {t("ProfilPerusahaanLabelAddressDetail")}:{" "}
+                            {order.shippingInfo.recipientAddressDetail}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {order.items.map((item, idx) => (
+                    <div className="border-t border-neutral-400 pt-4 mt-4">
+                      <ProductItem
+                        id={item.originalProductID}
+                        photo={item.imageUrl}
+                        productName={item.productName}
+                        variant={item.productDetails}
+                        variantID={item.orderProductVariantID}
+                        notes={item.note}
+                        discount={item.discountedPercentage}
+                        priceAfterDiscount={item.originalPromoPrice}
+                        priceBeforeDiscount={item.originalPrice}
+                        qty={item.quantity}
+                        atDetail
+                        orderStatus={orderStatus}
+                      />
+                    </div>
+                  ))}
+                  {data.storeOrders.length === 1 ? (
+                    <div className="border-t border-neutral-400 pb-2 pt-4 mt-4 text-base font-semibold">
+                      {t("AppKelolaPesananSellerMuatpartsRincianPembayaran")}
+                    </div>
+                  ) : (
+                    // 24. THP 2 - MOD001 - MP - 035 - QC Plan - Web - MuatParts - General - Daftar Pesanan - LB - 0031
+                    <div className="py-3 mt-3 flex justify-between items-center text-base font-semibold border-t border-neutral-400">
+                      <div className="">Subtotal</div>
+                      <div className="">
+                        {numberFormatMoney(order.subTotal)}
+                      </div>
+                    </div>
+                  )}
+                  <div className="font-medium space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="text-neutral-600">
+                        {t("BeliPaketIklanIndexTotalHarga")} (
+                        {order.items.reduce(
+                          (total, item) => total + item.quantity,
+                          0
+                        )}{" "}
+                        {t("labelProduct")})
+                      </div>
+                      <div className="">
+                        {numberFormatMoney(order.totalPrice)}
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-neutral-600">
+                        {t("AppKelolaProdukMuatpartsTambahBiayaPengiriman")} (
+                        {order.shippingInfo.courier} - {order.weight / 1000} kg)
+                      </div>
+                      <div className="">
+                        {numberFormatMoney(+order.shippingCost)}
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-neutral-600">
+                        {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0730 */}
+                        {t("LabeldetailPesananBiayaAsuransiPengiriman")}
+                      </div>
+                      <div className="">
+                        {numberFormatMoney(+order.insuranceCost)}
+                      </div>
+                    </div>
+                    {order.voucherUsed?.map((v) => (
+                      <div className="flex justify-between items-center">
+                        <div className="text-neutral-600">
+                          {t("AppMuatpartsDashboardSellerVoucher")}{" "}
+                          {v.voucherType !== "Biaya Pengiriman"
+                            ? v.voucherType
+                            : null}{" "}
+                          {order.storeName} ({v.voucherCode})
+                        </div>
+                        <div className="text-error-400">
+                          -{numberFormatMoney(+v.amount)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {data.storeOrders.length === 1 && (
+                    <>
+                      <div className="flex justify-between items-center pt-4 mt-4 border-t border-neutral-400 text-base font-semibold">
+                        <div className="">
+                          {t("AppMuatpartsDaftarPesananBuyerTotalPesanan")}
+                        </div>
+                        <div className="">
+                          {numberFormatMoney(data.storeOrders[0].subTotal)}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center pt-4 mt-4 border-t border-neutral-400 font-medium">
+                        {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0730 */}
+                        <div className="text-neutral-600">{t("LabeldetailPesananBiayaAplikasi")}</div>
+                        <div className="">
+                          {numberFormatMoney(+data.paymentInfo.platformFee)}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center mt-2 border-neutral-400 font-medium">
+                        <div className="text-neutral-600">
+                          {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0730 */}
+                          {t("LabeldetailPesananBiayaAdministrasi")}
+                        </div>
+                        <div className="">
+                          {numberFormatMoney(+data.paymentInfo.adminFee)}
+                        </div>
+                      </div>
+                      {data.paymentInfo?.voucherUsed?.map((v) => (
+                      <div className="flex justify-between items-center mt-2 font-medium">
+                        <div className="text-neutral-600">
+                          {t("AppMuatpartsDashboardSellerVoucher")}{" "}
+                          {/* {v.voucherType !== "Biaya Pengiriman"
+                            ? v.voucherType
+                            : null}{" "} */}
+                          Muatparts ({v.kodeVoucher})
+                        </div>
+                        <div className="text-error-400">
+                          -{numberFormatMoney(+v.amount)}
+                        </div>
+                      </div>
+                    ))}
+                      <div className="flex justify-between items-center pt-2 mt-2 border-t border-neutral-400 text-base font-bold">
+                        {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - LB - 0730 */}
+                        <div className="">{t("LabeldetailPesananTotalTagihan")}</div>
+                        <div className="">
+                          {numberFormatMoney(+data.paymentInfo.totalBill)}
+                        </div>
+                      </div>
+                      <div className="flex justify-between border-t mt-2 pt-4 items-center border-neutral-400 font-medium">
+                        {/* 24. THP 2 - MOD001 - MP - 035 - QC Plan - Web - MuatParts - General - Daftar Pesanan LB - 0040 */}
+                        <div className="text-neutral-600">
+                          {t("SubscriptionPaymentMethod")}
+                        </div>
+                        <div className="">
+                          {data?.paymentInfo?.paymentMethod}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+              {data.storeOrders?.length > 1 && (
+                <div className="shadow-muatmuat px-8 py-5 rounded-xl text-xs font-medium">
+                  <div className="flex justify-between items-center pb-3">
+                    {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - LB - 0730 */}
+                    <div className="font-bold">{t("AppMuatpartsDaftarPesananBuyerTotalPesanan")}</div>
+                    <div className="">
+                      {numberFormatMoney(+data.paymentInfo.totalOrder)}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center ">
+                    {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0730 */}
+                    <div className="text-neutral-600 ">{t("LabeldetailPesananBiayaAplikasi")}</div>
+                    <div className="">
+                      {numberFormatMoney(+data.paymentInfo.platformFee)}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center mt-3">
+                    {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0730 */}
+                    <div className="text-neutral-600 ">{t("LabeldetailPesananBiayaAdministrasi")}</div>
+                    <div className="">
+                      {numberFormatMoney(+data.paymentInfo.adminFee)}
+                    </div>
+                  </div>
+                  {data.paymentInfo?.voucherUsed?.map((v) => (
+                      <div className="flex justify-between items-center mt-3">
+                        <div className="text-neutral-600">
+                          {t("AppMuatpartsDashboardSellerVoucher")}{" "}
+                          {/* {v.voucherType !== "Biaya Pengiriman"
+                            ? v.voucherType
+                            : null}{" "} */}
+                          Muatparts ({v.kodeVoucher})
+                        </div>
+                        <div className="text-error-400">
+                          -{numberFormatMoney(+v.amount)}
+                        </div>
+                      </div>
+                    ))}
+                  <div className="flex justify-between items-center pt-4 mt-4 border-t border-neutral-400">
+                    {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0730 */}
+                    <div className="text-base font-bold">{t("LabeldetailPesananTotalTagihan")}</div>
+                    <div className="text-base font-bold">
+                      {numberFormatMoney(+data.paymentInfo.totalBill)}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="w-[338px]">
+              {orderStatus === "Dikemas" &&
+                data.storeOrders[0].shippingInfo.shippingType ===
+                  "takeaway" && (
+                  <PickupCode
+                    code={data.storeOrders[0].shippingInfo.trackingNumber}
+                  />
+                )}
+              <div className="shadow-muatmuat p-5 rounded-xl">
+                {orderStatus === "Menunggu Pembayaran" ? (
+                  <PaymentInfo
+                    data={data}
+                    orderStatus={orderStatus}
+                    paymentDeadline={data.paymentInfo.paymentDeadline}
+                    paymentMethod={data.paymentInfo.paymentMethod}
+                    methodLogo={data.paymentInfo.methodLogo}
+                    virtualAccount={data.paymentInfo.virtualAccount}
+                    totalBill={+data.paymentInfo.totalBill}
+                    copyToClipboard={copyToClipboard}
+                  />
+                ) : (
+                  <OrderTimeline
+                    trackingHistory={
+                      data.storeOrders?.[0].shippingInfo.trackingHistory
+                    }
+                  />
+                )}
+              </div>
+              {orderStatus !== "Menunggu Pembayaran" && (
+                <OrderAction
+                  orderStatus={orderStatus}
+                  data={data}
+                  mutateIdPesanan={mutateIdPesanan}
+                />
+              )}
+              {orderStatus === "Menunggu Pembayaran" && (
+                <div className="shadow-muatmuat px-5 py-6 rounded-xl mt-6">
+                  <PaymentGuide />
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default IdPesananWeb;

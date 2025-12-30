@@ -1,0 +1,154 @@
+import { useHeader } from '@/common/ResponsiveContext'
+import ButtonBottomMobile from '@/components/ButtonBottomMobile/ButtonBottomMobile'
+import RadioButton from '@/components/Radio/RadioButton'
+import React, { useRef, useState, useEffect } from 'react'
+import DataNotFound from "@/components/DataNotFound/DataNotFound";
+import { Loader2 } from 'lucide-react';
+// LBM - data tahun tidak muncul
+const types={
+    'Type':'type',
+    'Brand':'brand',
+    'Year':'year',
+    'Model':'model'
+}
+  /* IMPROVEMENT FILTER ON PRODUCTS */
+function VehicleTypeScreenProduct({data,getFilter,getFilterProduct,handleInput,search, handleLoadMore, hasMore, isLoadingFetchFilter}) {
+    const [state,setState]=useState('')
+    const separateKey = search?.placeholder?.split(' ')[1]
+    function onClickValue(key,val) {
+        setState(prev=>({...prev,[key]:val}))
+    }
+    const {setScreen}=useHeader()
+    
+    // INFINITE SCROLL LOGIC
+    const scrollContainerRef = useRef(null)
+    const hasUserScrolledRef = useRef(null)
+    const loaderRef = useRef(null)
+
+    // const onLoadMore = () => {
+       
+    // };
+
+    // const handleSearch = (keyword) => {
+    //     setOptionsArray([])
+    //     const updatedParams = { ...params, page:1, keyword:keyword };
+    //     const [baseURL] = url.split("?");
+    //     const newURL = `${baseURL}?${metaSearchParams(updatedParams)}`;
+    //     setParams(updatedParams)
+    //     setURL(newURL);
+    // }
+
+    useEffect(() => {
+        const el = scrollContainerRef.current;
+        if (!el) return;
+
+        const handleScroll = () => {
+        hasUserScrolledRef.current = true;
+        };
+
+        el.addEventListener("scroll", handleScroll);
+
+        return () => {
+        el.removeEventListener("scroll", handleScroll);
+        };
+    }, [data]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+            const first = entries[0];
+            if (
+                first.isIntersecting && 
+                hasMore[types[separateKey]]
+            ) {
+                handleLoadMore[types[separateKey]]()
+            } 
+            },
+            { root: scrollContainerRef.current, threshold: 0.1 }
+        );
+
+        if (loaderRef.current) {
+            observer.observe(loaderRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [data]);
+    
+    // const debouncedValue = useDebounce(getSearchModal, 1000)
+    // const isFirstRun = useRef(true)
+    // useEffect(()=>{
+    // if (isFirstRun.current){
+    //     isFirstRun.current=false;
+    //     return;
+    // }
+    // handleSearch(debouncedValue)
+    // },[debouncedValue])
+
+    useEffect(()=>{
+        console.log(separateKey.toLowerCase())
+        switch(separateKey.toLowerCase()){
+            case 'brand':
+                // setState(getFilter['brandID'])
+                setState((prev)=>({...prev, brand:getFilter['brandID']}))
+                break;
+            case 'type':
+                setState((prev)=>({...prev, type:getFilter['typeID']}))
+                break;
+            case 'year':
+                setState((prev)=>({...prev, year:getFilter['year']}))
+                break;
+            default:
+                setState((prev)=>({...prev, model:getFilter['modelID']}))
+                break;
+     
+        }
+    },[getFilter, separateKey])
+    useEffect(()=>{
+        console.log(state)
+    },[state])
+  return (
+    <div ref={scrollContainerRef} className='containerMobile pb-[120px]  flex flex-col gap-3 bg-[#fcfcfc] h-screen overflow-auto'>
+        {
+            !data?.[types[separateKey]]?.length?
+            <DataNotFound type='data' title='Tidak ada data' classname={'mt-10'} />
+            // :data?.[types[separateKey]]?.filter(val=> val.value?.toString()?.toLowerCase().includes(search?.value?.toLowerCase())).map(val=>{
+            //     return(
+            //         <React.Fragment key={val.id}  >
+            //             <div className='border-b border-neutral-400 pb-3'>
+            //                 <RadioButton checked={val.id===state?.[types[separateKey]]} value={val.id} onClick={a=>onClickValue(types[separateKey],a.value)} label={val.value} classnameLabel={'font-semibold text-sm text-neutral-900 w-full'} />
+            //             </div>
+
+                   
+            //         </React.Fragment>
+            //     )
+            // })
+            :data?.[types[separateKey]]?.map(val=>{
+                return(
+                    <React.Fragment key={val.id}  >
+                        <div className='border-b border-neutral-400 pb-3'>
+                            <RadioButton checked={val.id===state?.[types[separateKey]]} value={val.id} onClick={a=>onClickValue(types[separateKey],a.value)} label={val.value} classnameLabel={'font-semibold text-sm text-neutral-900 w-full'} />
+                        </div>
+
+                   
+                    </React.Fragment>
+                )
+            })
+        }
+        {/* {hasMore[types[separateKey]] && <div ref={loaderRef} className="h-8 w-full"/>} */}
+        {/* {isLoadingFetchFilter[types[separateKey]]&&(<div className="flex items-center justify-center w-full"><Loader2 className="animate-spin"/></div>)} */}
+        <ButtonBottomMobile textLeft={'Reset'} textRight={'Terapkan'} disableButtonLeft={!data?.[types[separateKey]]?.length} disableButtonRight={!data?.[types[separateKey]]?.length} 
+            // LBM - Filter Reset bug
+            onClickLeft={()=>{
+                setScreen('filter');
+                getFilterProduct.setFilterProduct(types[separateKey]==='brand'?'brandID':types[separateKey]==='year'?'year':types[separateKey]==='model'?'modelID':'typeID','')
+            }} 
+            onClickRight={()=>{
+            let key = Object.keys(state)[0]
+            handleInput(key==='year'?key:key==='type'?'typeID':`${key}ID`,state?.[types[separateKey]])
+            setScreen('filter')
+        }} />
+    </div>
+  )
+}
+
+export default VehicleTypeScreenProduct

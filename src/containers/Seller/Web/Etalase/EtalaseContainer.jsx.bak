@@ -1,0 +1,133 @@
+import { useMemo } from "react";
+import ProductGrid from "./ProductGrid"
+import Sidebar from "./Sidebar"
+import styles from "./EtalaseContainer.module.scss"
+import BreadCrumb from "@/components/Breadcrumb/Breadcrumb";
+import Input from "@/components/Input/Input";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import { useCustomRouter } from "@/libs/CustomRoute";
+import PaginationSeller from "../PaginationSeller";
+import { useLanguage } from "@/context/LanguageContext";
+// FIX BUG Profil Seller Sisi Buyer LB-0043
+// FIX BUG Pengecekan Ronda Muatparts LB-0054
+import SortingDropdown from "../../Component/SortingDropdown";
+// 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+import useSellerStore from "@/store/seller";
+
+const EtalaseContainer = ({
+    onChangeTab,
+
+    // API
+    sellerProfile,
+    etalase,
+    // LBM - OLIVER - PASSING STATE LOADING UNTUK SKELETON - MP - 020
+    isLoadingProductByEtalase,
+    pagination,
+    // Shared search props
+    onSearch,
+    onClearSearch,
+    selectedEtalase,
+    setSelectedEtalase
+}) => {
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+    const { filter, productByEtalase, resetFilter, search, setFilter, setSearch } = useSellerStore();
+    const router = useCustomRouter();
+    const { t } = useLanguage();
+
+    const options = [
+        {
+            label: t("labelNewest"),
+            value: "newest"
+        },
+        {
+            label: t("labelOldest"),
+            value: "oldest"
+        },
+    ];
+
+    const breadcrumbData = useMemo(() => 
+        [{ name: 'Muatparts' }, { name: sellerProfile.name }, { name: t("buttonShowcase") }, { name: selectedEtalase.title }], 
+        [JSON.stringify(selectedEtalase), JSON.stringify(sellerProfile)]
+    );
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+    const handleChange = (value) => setFilter({ sort: value });
+
+    const handleClickBreadCrumb = (val) => {
+        if (val.name === "Muatparts") {
+            router.push("/")
+        }
+        if (val.name === sellerProfile.name) {
+            onChangeTab(0)
+        }
+        if (val.name === t("buttonShowcase")) {
+            setSelectedEtalase(etalase[0])
+            // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+            resetFilter()
+            setSearch("")
+        }
+    }
+
+    return (
+        <div className="flex gap-x-[38px] mt-6">
+            <Sidebar
+                etalase={etalase}
+                selectedEtalase={selectedEtalase}
+                setSelectedEtalase={setSelectedEtalase}
+            />
+            <div>
+                <BreadCrumb data={breadcrumbData} onclick={handleClickBreadCrumb} />
+                <div className="flex flex-col gap-y-4">
+                    <div className="flex gap-x-3">
+                        <Input
+                            classname={`w-[262px] ${styles.input_search}`}
+                            placeholder={t("placeholderSearchProduct")}
+                            icon={{
+                                left: (
+                                    <IconComponent src={"/icons/search.svg"} />
+                                ),
+                                right: search ? (
+                                    <IconComponent
+                                        src={"/icons/silang.svg"}
+                                        onclick={onClearSearch}
+                                    />
+                                ) : null,
+                            }}
+                            value={search}
+                            changeEvent={(e) => setSearch(e.target.value)}
+                            onKeyUp={onSearch}
+                        />
+                        {/* SORTING DROPDOWN */}
+                        <SortingDropdown
+                            // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+                            disabled={productByEtalase?.length === 0 && filter.searchQuery !== "" && !filter.sort}
+                            onChange={handleChange}
+                            options={options}
+                            value={filter.sort}
+                        />
+                    </div>
+                    <span className="font-bold text-[18px] leading-[21.6px]">
+                        {selectedEtalase.title}
+                    </span>
+                    <ProductGrid
+                        // LBM - OLIVER - PASSING STATE LOADING UNTUK SKELETON - MP - 020
+                        isLoading={isLoadingProductByEtalase}
+                        products={productByEtalase}
+                        sellerProfile={sellerProfile}
+                    />
+                    {productByEtalase?.length > 0 ? (
+                        <div className="flex justify-end">
+                            <PaginationSeller
+                                currentPage={filter.page}
+                                totalPages={pagination?.LastPage}
+                                // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0588
+                                onPageChange={(pageNumber) => setFilter({ page: pageNumber })}
+                            />
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export default EtalaseContainer

@@ -1,0 +1,281 @@
+import { useEffect, useState } from "react";
+import style from "./OrderCard.module.scss";
+import { MapPin } from "lucide-react";
+import ProductList from "./ProductList";
+import IconComponent from "../IconComponent/IconComponent";
+import SelectShippingOption from "./SelectShippingOption";
+import { numberFormatMoney } from "@/libs/NumberFormat";
+import LocationManagementModalWeb from "@/containers/LocationManagementModalWeb/LocationManagementModalWeb";
+import ModalPilihVoucher from "../Voucher/checkout/ModalPilihVoucher";
+import ImageComponent from "../ImageComponent/ImageComponent";
+import { useCheckoutStore } from "@/store/checkout";
+import SWRHandler from "@/services/useSWRHook";
+import { useLanguage } from "@/context/LanguageContext";
+
+const OrderCard = ({
+  order,
+  orderIndex,
+  onSellerCheckChange,
+  onProductCheckChange,
+  onProductQuantityChange,
+  onSelectShippingCost,
+  updateProductNote,
+  onUseVoucher,
+  onChangeAddress
+}) => {
+  const { t } = useLanguage();
+  const { useSWRMutateHook } = SWRHandler();
+  const { checkPay, setCheckPay } = useCheckoutStore();
+  const [dataUsedVoucher, setDataUsedVoucher] = useState(
+    order.usedVouchers?.dataUsedVoucher
+  );
+  const [dataUsedTransaction, setDataUsedTransaction] = useState(
+    order.usedVouchers?.dataUsedTransaction
+  );
+
+  const toggleUsedVoucher = (data) => {
+    setDataUsedVoucher((prev) => (prev === data ? null : data));
+  };
+
+  const toggleUsedTransaction = (data) => {
+    setDataUsedTransaction((prev) => (prev === data ? null : data));
+  };
+
+  const [modalVoucher, setModalVoucher] = useState(false);
+
+  const [shippingOptions, setShippingOptions] = useState([]);
+
+  useEffect(() => {
+    setShippingOptions(order.shippingCost);
+  }, [order.shippingCost]);
+
+  const [getIndexLocationMultiple, setIndexLocationMultiple] = useState({
+    index: 0,
+    location: {},
+  });
+
+  const [changeAddress, setChangeAddress] = useState(false);
+
+  const [shippingCost, setShippingCost] = useState();
+  const [getModal, setModal] = useState("");
+
+  const totalQuantity = order.products.reduce(
+    (acc, product) => acc + product.qty,
+    0
+  );
+
+  useEffect(() => {
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0214
+    onSelectShippingCost({
+      ...order,
+      selectedShippingCost: shippingCost ?? {},
+    });
+  }, [shippingCost]);
+
+  function renderVoucherConditions() {
+    // Check if both voucher objects have values
+    const hasDataUsedVoucher =
+      dataUsedVoucher && Object.keys(dataUsedVoucher).length > 0;
+    const hasDataUsedTransaction =
+      dataUsedTransaction && Object.keys(dataUsedTransaction).length > 0;
+
+    // Count the number of vouchers selected
+    const voucherCount =
+      (hasDataUsedVoucher ? 1 : 0) + (hasDataUsedTransaction ? 1 : 0);
+
+    // If at least one voucher is selected
+    if (voucherCount > 0) {
+      return (
+        <button
+          className="flex items-center text-xs font-medium text-primary-700"
+          onClick={() => setModalVoucher(true)}
+        >
+          <div className="pt-px">
+            {voucherCount} {t("labelVoucherTerpilih")}
+          </div>
+        </button>
+      );
+    }
+
+    // If no vouchers are selected
+    return (
+      <button
+        className={`${style.textButtonPrimary} ${style.active}`}
+        onClick={() => {
+          setModalVoucher(true);
+        }}
+      >
+        {t("labelGunakanVoucherPenjual")}
+      </button>
+    );
+  }
+
+  const handleSubmitVoucher = () => {
+    setModalVoucher(false);
+    onUseVoucher(orderIndex, {
+      dataUsedVoucher,
+      dataUsedTransaction,
+    });
+  };
+
+  function isEmpty(obj) {
+    return Object.keys(obj).length === 0;
+  }
+
+  const SHIPPING_COST_EP =
+    process.env.NEXT_PUBLIC_GLOBAL_API + "v1/muatparts/order/shipping_cost";
+
+  const {
+    data: resShippingCost,
+    trigger: triggerShippingCost,
+    error: errorShippingCost,
+    isMutating: loadingShippingCost,
+  } = useSWRMutateHook(SHIPPING_COST_EP, "POST");
+
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0155
+  const handleSaveAlamatMultiple = (val) => {
+    setShippingOptions([]);
+    setShippingCost();
+    setCheckPay(false)
+    setIndexLocationMultiple((prev) => ({ ...prev, location: val }));
+    onChangeAddress(val)
+    const payload = {
+      sellerID: order.seller.id,
+      locationID: val.ID,
+      products: order.products.map((product) => ({
+        id: product.id,
+        variantID: product.variant?.id || "",
+        salesType: product.salesType || "Satuan/Ecer",
+        qty: product.qty,
+      })),
+    };
+
+    triggerShippingCost(payload);
+  };
+
+  useEffect(() => {
+    if (!isEmpty(order.shippingAddress)) {
+      setIndexLocationMultiple((prev) => ({
+        ...prev,
+        location: order.shippingAddress,
+      }));
+    }
+  }, [order.shippingAddress]);
+
+  useEffect(() => {
+    if (resShippingCost)
+      setShippingOptions(resShippingCost?.data?.Data?.shippingCost);
+  }, [resShippingCost]);
+
+  return (
+    <>
+      <div className="px-8 py-5 shadow-muatmuat rounded-xl space-y-3 mt-6 first:mt-0">
+        {/* <pre>{JSON.stringify(order.shippingCost, null, 2)}</pre> */}
+        <div className="font-bold ">
+          {t("AppKomplainBuyerIndexPesanan")} {orderIndex + 1}
+        </div>
+        <div className="flex justify-between">
+          <div className="flex items-center gap-2">
+            <IconComponent
+              src={"/icons/product-house.svg"}
+              width={24}
+              height={24}
+            />
+            <div className="text-xs font-semibold">
+              {order.seller.storeName}
+            </div>
+          </div>
+          {renderVoucherConditions()}
+        </div>
+        <div className="flex items-center px-4 py-2 bg-neutral-200 gap-2 rounded-md">
+          <MapPin size={16} className="text-neutral-700" />
+          <div className="font-medium text-xs capitalize">
+            {t("labelDikirimDari")} : {order.seller.cityName?.toLowerCase()}
+          </div>
+        </div>
+        <div
+          className={`flex items-center px-4 py-2 gap-2 rounded-md border ${
+            // 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer LB-0079
+            isEmpty(getIndexLocationMultiple.location) && checkPay
+              ? "border-error-400"
+              : "border-neutral-400"
+          }`}
+        >
+          <MapPin size={16} className="text-neutral-700" />
+          <div className="font-medium text-xs capitalize">
+            {t("labelDikirimKe")} :{" "}
+            <strong>
+              {getIndexLocationMultiple.location?.Name?.toLowerCase()}
+            </strong>
+          </div>
+          <button
+            className={`ml-auto ${style.textButtonPrimary} ${style.active}`}
+            onClick={() => setChangeAddress(true)}
+          >
+            {t("labelUbahAlamatTujuan")}
+          </button>
+        </div>
+        {/* 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer LB-0079 */}
+        {isEmpty(getIndexLocationMultiple.location) && checkPay && (
+          <div className="text-xs font-medium text-error-400 !mt-1.5">
+            Alamat tujuan wajib diisi
+          </div>
+        )}
+        <div className="divide-y">
+          {order.products.map((product, index) => (
+            <ProductList
+              key={product.id}
+              item={product}
+              orderIndex={orderIndex}
+              productIndex={index}
+              updateProductNote={updateProductNote}
+            />
+          ))}
+        </div>
+        <SelectShippingOption
+          options={shippingOptions}
+          onSelect={(val) => setShippingCost(val)}
+        />
+        <div className="font-semibold">{t("labelSubTotalBuyer")}</div>
+        <div className="flex justify-between">
+          <div className="text-neutral-600 font-medium text-xs">
+            Harga Produk ({totalQuantity} item)
+          </div>
+          <div className="font-medium text-xs">
+            {numberFormatMoney(order.totalAmount)}
+          </div>
+        </div>
+        <div className="flex justify-between">
+          <div className="text-neutral-600 font-medium text-xs">
+            {t("AppKelolaProdukMuatpartsTambahBiayaPengiriman")}
+          </div>
+          <div className="font-medium text-xs">
+            {shippingCost ? numberFormatMoney(shippingCost.buyerCost) : "-"}
+          </div>
+        </div>
+      </div>
+
+      <LocationManagementModalWeb
+        isOpen={changeAddress}
+        setClose={() => setChangeAddress(false)}
+        onSaveChange={handleSaveAlamatMultiple}
+        preventDefaultSave={true}
+        defaultValue={getIndexLocationMultiple.location}
+      />
+
+      <ModalPilihVoucher
+        isOpen={modalVoucher}
+        setIsOpen={setModalVoucher}
+        sellerId={order.seller.id}
+        productIds={order.products?.map((item) => item.id)}
+        setUsedVoucher={toggleUsedVoucher}
+        setUsedTransaction={toggleUsedTransaction}
+        usedVoucher={dataUsedVoucher}
+        usedTransaction={dataUsedTransaction}
+        onSubmit={handleSubmitVoucher}
+      />
+    </>
+  );
+};
+
+export default OrderCard;

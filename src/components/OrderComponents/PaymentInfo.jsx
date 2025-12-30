@@ -1,0 +1,126 @@
+import { useEffect, useState } from "react";
+import IconComponent from "../IconComponent/IconComponent";
+import { formatDate } from "@/libs/DateFormat";
+import { numberFormatMoney } from "@/libs/NumberFormat";
+import OrderAction from "./OrderAction";
+import Image from "next/image";
+import { useLanguage } from "@/context/LanguageContext";
+
+const PaymentInfo = ({
+  paymentDeadline,
+  paymentMethod,
+  methodLogo,
+  virtualAccount,
+  totalBill,
+  orderStatus,
+  copyToClipboard,
+  data = ""
+}) => {
+  const {t} = useLanguage()
+  const [countdown, setCountdown] = useState("");
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = new Date(paymentDeadline).getTime() - now;
+
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      const totalHours = Math.floor(distance / (1000 * 60 * 60));
+
+      setCountdown(
+        `${totalHours}:${String(minutes).padStart(2, "0")}:${String(
+          seconds
+        ).padStart(2, "0")}`
+      );
+    }, 0);
+    return () => clearInterval(interval);
+  }, [paymentDeadline]);
+
+  return (
+    <div className="space-y-6 h-fit">
+      <div className="p-4 rounded-xl space-y-3 bg-warning-100">
+        <div className="flex justify-between items-center font-bold">
+          {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0731 */}
+          <div className="text-secondary-900">{t("LabeldetailPesananBayarSebelum")}</div>
+          <div className="flex items-center gap-1 px-2 py-1  bg-error-50 rounded-md">
+            <IconComponent
+              src={"/icons/countdown.svg"}
+              color="error"
+              width={12}
+              height={12}
+            />
+            <div className="mt-[2px] text-error-400 text-xs font-semibold">
+              {countdown}
+            </div>
+          </div>
+        </div>
+        <div className="text-sm font-semibold">
+          {formatDate(paymentDeadline)}
+        </div>
+      </div>
+      <div className="space-y-1">
+        <div className="text-neutral-600 text-xs font-medium">
+          {t('SubscriptionCreateLabelMetodePembayaran')}
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="font-bold text-xs">{paymentMethod}</div>
+          <Image src={methodLogo} width={24} height={24} />
+        </div>
+      </div>
+      <div className="space-y-1">
+        <div className="text-neutral-600 text-xs font-medium">
+          {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0731 */}
+          {t("LabeldetailPesananNomorVirtualAccount")}
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="font-bold text-xs">{virtualAccount}</div>
+          <button
+            className="flex gap-1 items-center"
+            onClick={() =>
+              copyToClipboard(
+                virtualAccount,
+                "Nomor Virtual Account berhasil disalin"
+              )
+            }
+          >
+            <div className="text-primary-700 text-xs font-semibold">{t('AppPromosiSellerMuatpartsSalin')}</div>
+            <IconComponent
+              src={"/icons/copy-outline-blue.svg"}
+              width={16}
+              height={16}
+            />
+          </button>
+        </div>
+      </div>
+      <div className="space-y-1">
+        <div className="text-neutral-600 text-xs font-medium">
+          {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0731 */}
+          {t("LabeldetailPesananTotalTagihan")}
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="font-bold text-xs">
+            {numberFormatMoney(totalBill)}
+          </div>
+          <button
+            className="flex gap-1 items-center"
+            onClick={() =>
+              copyToClipboard(totalBill, "Total Tagihan berhasil disalin")
+            }
+          >
+            <div className="text-primary-700 text-xs font-semibold">{t('AppPromosiSellerMuatpartsSalin')}</div>
+            <IconComponent
+              src={"/icons/copy-outline-blue.svg"}
+              width={16}
+              height={16}
+            />
+          </button>
+        </div>
+      </div>
+      <OrderAction orderStatus={orderStatus} data={data}  />
+    </div>
+  );
+};
+
+export default PaymentInfo;

@@ -1,0 +1,71 @@
+
+'use client';
+import { viewport } from '@/store/viewport';
+import IconComponent from '../IconComponent/IconComponent';
+import style from './ButtonAddAddressProduct.module.scss'
+import { useTranslation } from '@/services/languageTranslate';
+function ButtonAddAddressProduct({number,onAddAddress,address,onDelete,isError={index:null,text:''}}) {
+    {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0727 */}
+    const {t} = useTranslation()
+    const {isMobile}=viewport()
+    return (
+        <div className='flex flex-col gap-3'>
+            <div className={`py-4 px-3 rounded-md border ${(typeof isError?.index==='number')?'border-error-400':'border-neutral-400'} flex justify-between text-neutral-900 gap-2`}>
+                {
+                    !isMobile?<>
+                        <div className=' flex flex-col gap-3 w-full'>
+                            <div className='flex justify-between w-full gap-2 items-center'>
+                                <span className=' text-neutral-50 font-bold text-[10px] rounded-full grid place-content-center bg-primary-700 px-2 py-1'>{number}</span>
+                                
+                                {address?.ID?
+                                <div className='flex w-full justify-between'>
+                                    <span className='medium-sm'>{t("LabeldrawerPilihVarianDanAlamatDikirimke")}</span>
+                                    <div className='flex gap-2 items-center'>
+                                        <span className='cursor-pointer medium-xs select-none text-primary-700' onClick={onAddAddress}>{t("LabeldrawerPilihVarianDanAlamatUbahAlamatTujuan")} </span>
+                                        <span className='cursor-pointer' onClick={onDelete}>
+                                            <IconComponent src={'/icons/trash-az.svg'} classname={'icon-error-400'} width={20} height={20} />
+                                        </span>
+                                    </div>
+                                </div>
+                                :<div className='flex w-full justify-between'>
+                                    <span className='medium-sm'>{t("LabeldrawerPilihVarianDanAlamatDikirimke")}</span>
+                                    <span className='text-primary-700 medium-sm cursor-pointer' onClick={onAddAddress}>{t("LabeldrawerPilihVarianDanAlamatTambahAlamat")}</span>
+                                </div>}
+                            </div>
+                            {
+                                address?.ID?
+                                <div className='flex flex-col gap-3'>
+                                    <span className='bold-xs w-full line-clamp-1'>{address?.Name}</span>
+                                    {/* <span className='medium-xs w-full line-clamp-2'>{address?.PicName} ({address?.PicNoTelp})</span>
+                                    <span className='medium-xs w-full line-clamp-1'>{address?.Address}</span> */}
+                                    {address?.Notes?<span className='medium-xs w-full line-clamp-2'>Catatan : {address?.Notes}</span>:''}
+                                </div>:''
+                            }
+                        </div>
+                    </>
+                    :<>
+                        <span className=' text-neutral-50 font-bold text-[10px] rounded-full h-fit px-2 py-1 bg-primary-700 '>{number}</span>
+                        {address?.ID?
+                        <div className='flex w-full justify-between'>
+                            {/* 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - LB - 0175 */}
+                            {isMobile&&<span className='semi-sm'>{address?.Name}</span>}
+                            <div className='flex gap-2'>
+                                <span className='cursor-pointer' onClick={onAddAddress}>
+                                    <IconComponent src={'/icons/edit-gray.svg'} width={20} height={20} />
+                                </span>
+                                <span className='cursor-pointer' onClick={onDelete}>
+                                    <IconComponent src={'/icons/trash-az.svg'} classname={'icon-error-400'} width={20} height={20} />
+                                </span>
+                            </div>
+                        </div>
+                        :<span className='text-primary-700 medium-sm cursor-pointer' onClick={onAddAddress}>Tambah Alamat</span>}
+                    </>
+                }
+            </div>
+            {isError?.text&&<span className='medium-xs text-error-400'>{isError?.text}</span>}
+        </div>
+    );
+}
+
+export default ButtonAddAddressProduct;
+  

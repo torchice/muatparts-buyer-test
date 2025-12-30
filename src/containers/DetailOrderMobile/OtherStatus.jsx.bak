@@ -1,0 +1,583 @@
+import { status_pesanan } from "@/app/daftarpesanan/Daftarpesanan";
+import { useHeader } from "@/common/ResponsiveContext";
+import Button from "@/components/Button/Button";
+import ButtonBottomMobile from "@/components/ButtonBottomMobile/ButtonBottomMobile";
+import CardOrderProduct from "@/components/CardOrderProduct/CardOrderProduct";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import ModalComponent from "@/components/Modals/ModalComponent";
+import DropshipCard from "@/components/OrderComponents/DropshipCard";
+import ToastApp from "@/components/ToastApp/ToastApp";
+import { useLanguage } from "@/context/LanguageContext";
+import { useCustomRouter } from "@/libs/CustomRoute";
+import { formatDateFullMonth } from "@/libs/DateFormat";
+import { numberFormatMoney } from "@/libs/NumberFormat";
+import { CopyClipboard, metaSearchParams } from "@/libs/services";
+import SWRHandler from "@/services/useSWRHook";
+import Image from "next/image";
+import React, { useEffect, useState } from "react";
+
+function OtherStatus({
+  detailPesanan,
+  status,
+  multipleButtonBottom = false,
+  textLeftButton,
+  textRightButton,
+  onClickLeft,
+  onClickRight,
+  leftColor,
+  rightColor,
+  onToggle,
+  onClick,
+  textButton,
+  colorButton,
+  onClickSetLacakPesanan,
+  action_button_detail,
+  onShowAllProduct,
+}) {
+  const { t } = useLanguage();
+  const router = useCustomRouter();
+
+  const { setScreen } = useHeader();
+  const [getModal, setModal] = useState("");
+  const [success, setSuccess] = useState("");
+  const [paramsDownload, setParamsDownload] = useState(null);
+
+  const { useSWRHook } = SWRHandler();
+  const { data, error } = useSWRHook(
+    paramsDownload
+      ? `v1/muatparts/transaction/print?transactionIds[0]=${paramsDownload?.transactionIds}`
+      : null
+  );
+
+  useEffect(() => {
+    if (error) setParamsDownload(null);
+  }, []);
+  useEffect(() => {
+    if (success)
+      setTimeout(() => {
+        setSuccess("");
+      }, [800]);
+  }, [success]);
+  useEffect(() => {
+    if (data?.Data) window.open(data.Data, "_blank");
+  }, [data]);
+
+  return (
+    <div className="bg-neutral-200 flex flex-col gap-2 text-neutral-900">
+      <ModalComponent
+        full
+        hideHeader
+        setClose={() => setModal("")}
+        isOpen={getModal === "kode_pick_up"}
+      >
+        <div className="p-4 flex flex-col gap-4 items-center w-[272px]">
+          <span className="bold-base">Kode Pick Up</span>
+          <span className="medium-sm text-center">
+            Tunjukkan kode ini kepada Penjual untuk mengambil pesanan kamu
+          </span>
+          <span className="bold-sm !text-[30px] tracking-[11px]">002475</span>
+        </div>
+      </ModalComponent>
+      {(status?.status === "Menunggu Respon Penjual" ||
+        status?.status === "Dikemas" ||
+        status?.status === "Pengemasan Produk") && (
+        <YellowStatus
+          date={status.date}
+          title={status.title_text}
+          text={status.subtitle_text}
+        />
+      )}
+      {(status?.status === "Selesai" ||
+        status?.status === "Pengembalian Dana Selesai" ||
+        status?.status === "Komplain Selesai" ||
+        status?.status === "Tiba di Tujuan") && (
+        <GreenStatus data={detailPesanan?.statusInfo?.statusInfoBuyer} />
+      )}
+      {status?.status === "Dikirim" && (
+        <BlueStatus data={detailPesanan?.statusInfo?.statusInfoBuyer} />
+      )}
+      {(status?.status === "Dikomplain" ||
+        status?.status === "Dibatalkan Penjual" ||
+        status?.status === "Dibatalkan Pembeli" ||
+        status?.status === "Dibatalkan Sistem") && (
+        <RedStatus data={detailPesanan?.statusInfo?.statusInfoBuyer} />
+      )}
+      <ToastApp
+        show={success}
+        onClose={() => setSuccess("")}
+        text={`${success} berhasil disalin`}
+      />
+      {/* invoice detail */}
+      {detailPesanan?.storeOrders?.[0]?.isDropship && (
+        <DropshipCard
+          name={detailPesanan.storeOrders[0].dropshipName}
+          phone={detailPesanan.storeOrders[0].dropshipPhone}
+        />
+      )}
+      <div className="py-6 px-4 flex flex-col gap-6 bg-neutral-50">
+        <div className="flex flex-col gap-4 medium-sm">
+          <span className="text-neutral-600">Nomor Invoice</span>
+          <div
+            className="flex gap-1 select-none"
+            onClick={() =>
+              setParamsDownload({
+                transactionIds: detailPesanan?.storeOrders?.[0]?.transactionID,
+              })
+            }
+          >
+            <span className="medum-sm text-primary-700">
+              {detailPesanan?.storeOrders?.[0]?.invoiceNumber}
+            </span>
+            <span
+              onClick={() =>
+                setParamsDownload({
+                  transactionIds:
+                    detailPesanan?.storeOrders?.[0]?.transactionID,
+                })
+              }
+            >
+              <IconComponent
+                classname={"icon-blue"}
+                src={"/icons/download.svg"}
+              />
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-4 medium-sm">
+          <span className="text-neutral-600">
+            {t("DetailPaketIklanIndexTanggalPembelian")}
+          </span>
+          {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0429 */}
+          <span>{formatDateFullMonth(detailPesanan?.purchaseDate)}</span>
+        </div>
+      </div>
+      {/* flow ambil langsung */}
+      {detailPesanan?.storeOrders?.[0]?.shippingInfo?.shippingType ===
+        "takeaway" && (
+        <div className="flex flex-col gap-6 py-6 px-4 bg-neutral-50">
+          <span className="semi-sm">Pesanan Siap Diambil</span>
+          <span className="medium-xs text-neutral-700">
+            Kamu wajib memberikan kode pick up saat mengambil barang
+          </span>
+          <Button
+            Class="!max-w-none !w-full !h-8"
+            onClick={() => setModal("kode_pick_up")}
+          >
+            Tampilkan Kode Pick Up
+          </Button>
+        </div>
+      )}
+      {/* store and products */}
+      {detailPesanan?.storeOrders?.map((val, i) => {
+        return (
+          <div key={i} className="flex flex-col gap-2 bg-neutral-200">
+            <div className="py-6 px-4 flex flex-col gap-6 bg-neutral-50">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-1">
+                  <IconComponent src={"/icons/product-house.svg"} />
+                  <span className="semi-sm">{val?.storeName}</span>
+                </div>
+                <span className="bg-neutral-200 h-fit py-1 rounded-md text-neutral-700 flex items-center gap-2 px-3">
+                  <span className="w-4 h-4">
+                    <IconComponent src={"/icons/marker-outline.svg"} />
+                  </span>
+                  <span className="medium-xs">
+                    {t("labelDikirimDari")} : {val?.shippingOrigin}
+                  </span>
+                </span>
+              </div>
+              <div className="flex flex-col gap-6">
+                <span className="medium-sm">{t("labelDetailProduk")}</span>
+                <div className="flex flex-col ">
+                  {val?.items?.slice(0, 2)?.map((product, i) => {
+                    return (
+                      <CardOrderProduct
+                        classname={"pb-8"}
+                        key={i}
+                        name={product?.productName}
+                        afterPrice={product?.originalPromoPrice}
+                        beforePrice={product?.originalPrice}
+                        catatan={product?.note}
+                        quantity={product?.quantity}
+                        discount={product?.discountedPercentage}
+                        description={product?.productDetails}
+                        image={product?.imageUrl}
+                      />
+                    );
+                  })}
+                  {val?.items?.length > 2 ? (
+                    <span
+                      onClick={() => {
+                        onShowAllProduct(val?.items);
+                        setScreen("show_all_products");
+                      }}
+                      className="medium-sm text-primary-700 self-end"
+                    >
+                      +{val?.items.length - 2} produk lainnya
+                    </span>
+                  ) : (
+                    ""
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* info pengiriman */}
+            <div className="py-6 px-4 flex flex-col gap-6 bg-neutral-50">
+              <span className="semi-sm">Info Pengiriman</span>
+              <div className="flex flex-col gap-4 medium-sm">
+                <span className="text-neutral-600">Nomor Resi</span>
+                <div className="flex gap-1">
+                  <span>{val?.shippingInfo?.trackingNumber}</span>
+                  <span
+                    onClick={() =>
+                      CopyClipboard(
+                        val?.shippingInfo?.trackingNumber,
+                        "Nomor Resi",
+                        setSuccess
+                      )
+                    }
+                  >
+                    <IconComponent src={"/icon/copy-outline-blue.svg"} />
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-4 pb-6 border-b border-neutral-400">
+                {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0404 */}
+                <span className="medium-sm text-neutral-600">Kurir</span>
+                <span className="semi-sm ">{val?.shippingInfo?.courier}</span>
+                <span className="medium-sm text-neutral-600">
+                  {t("AppMuatpartsProfilSellerIndexAlamat")}
+                </span>
+                <span className="semi-sm ">
+                  {val?.shippingInfo?.recipientAddressName}
+                </span>
+                <span className="medium-sm ">
+                  {val?.shippingInfo?.recipientName} (
+                  {val?.shippingInfo?.recipientPhone})
+                </span>
+                <span className="medium-sm ">
+                  {val?.shippingInfo?.recipientAddress}
+                </span>
+                {val?.shippingInfo?.note && (
+                  <span className="medium-sm ">
+                    {t("KontrakHargaIndexCatatan")}: {val?.shippingInfo?.note}
+                  </span>
+                )}
+              </div>
+              <span
+                className="text-primary-700 medium-sm self-end select-none"
+                onClick={() => {
+                  onClickSetLacakPesanan(val?.shippingInfo?.trackingHistory);
+                  setScreen("lacak_pesanan_detail");
+                }}
+              >
+                {t("AppKelolaPesananSellerMuatpartsLacakPesanan")}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+      <div className="py-6 px-4 flex flex-col bg-neutral-50 gap-6">
+        <div className="flex flex-col gap-6 pb-6 border-b border-neutral-400">
+          <span className="semi-sm">
+            {t("SubscriptionCreateLabelMetodePembayaran")}
+          </span>
+          <span className="medium-sm">
+            {detailPesanan?.paymentInfo?.paymentMethod}
+          </span>
+        </div>
+        <div className="flex flex-col gap-6 pb-6 border-b border-neutral-400">
+          <span className="semi-sm">
+            {t("AppKelolaPesananSellerMuatpartsRincianPembayaran")}
+          </span>
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <span className="medium-sm text-neutral-600">
+                {t("BeliPaketIklanIndexTotalHarga")} (
+                {detailPesanan?.storeOrders?.[0]?.items?.length + " "}produk)
+              </span>
+              <span className="medium-sm">
+                {numberFormatMoney(detailPesanan?.storeOrders?.[0]?.totalPrice)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="medium-sm text-neutral-600">
+                {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0405 */}
+                {t("AppKelolaProdukMuatpartsTambahBiayaPengiriman")} (
+                {detailPesanan?.storeOrders?.[0]?.shippingInfo?.courier +
+                  " " +
+                  detailPesanan?.storeOrders?.[0]?.weight / 1000 +
+                  " "}
+                kg)
+              </span>
+              <span className="medium-sm">
+                {numberFormatMoney(
+                  detailPesanan?.storeOrders?.[0]?.shippingCost
+                )}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="medium-sm text-neutral-600">
+                Biaya Asuransi Pengiriman
+              </span>
+              <span className="medium-sm">
+                {numberFormatMoney(
+                  detailPesanan?.storeOrders?.[0]?.insuranceCost
+                )}
+              </span>
+            </div>
+            {detailPesanan?.storeOrders?.[0]?.voucherUsed?.length ? (
+              <div className="flex justify-between items-center">
+                <span className="medium-sm text-neutral-600">
+                  Voucher muatparts (
+                  {numberFormatMoney(detailPesanan?.biayaAsuransi)})
+                </span>
+                <span className="medium-sm">
+                  {numberFormatMoney(detailPesanan?.voucher)}
+                </span>
+              </div>
+            ) : (
+              ""
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col gap-6 pb-6 border-b border-neutral-400">
+          <div className="flex justify-between items-center">
+            <span className="semi-sm ">
+              {t("AppKelolaPesananSellerMuatpartsTotalPesanan")}
+            </span>
+            <span className="semi-sm">
+              {numberFormatMoney(detailPesanan?.storeOrders?.[0]?.subTotal)}
+            </span>
+          </div>
+          {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0406 */}
+          {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0561 */}
+          {/* <div className="flex justify-between items-center">
+            <span className="medium-sm text-neutral-600">Biaya {detailPesanan?.paymentInfo?.
+paymentMethod}</span>
+            <span className="medium-sm">
+              {numberFormatMoney(detailPesanan?.paymentInfo?.adminFee)}
+            </span>
+          </div> */}
+          <div className="flex justify-between items-center">
+            <span className="medium-sm text-neutral-600">Biaya Aplikasi</span>
+            <span className="medium-sm">
+              {numberFormatMoney(detailPesanan?.paymentInfo?.platformFee)}
+            </span>
+          </div>
+          <div className='w-full flex justify-between items-center'>
+              <span className='text-neutral-600'>Biaya Administrasi</span>
+              <span>{numberFormatMoney(detailPesanan?.paymentInfo?.adminFee)}</span>
+          </div>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="semi-sm ">Total Tagihan</span>
+          <span className="semi-sm">
+            {numberFormatMoney(detailPesanan?.paymentInfo?.totalBill)}
+          </span>
+        </div>
+        {status?.status === "Tiba di Tujuan" && (
+          <Button
+            color="error_secondary"
+            Class="!w-full !max-w-full"
+            onClick={() =>
+              router.push(
+                `/komplainbuyer?OrderID=${detailPesanan?.orderID}&TransactionID=${detailPesanan?.storeOrders[0].transactionID}`
+              )
+            }
+          >
+            Ajukan Komplain
+          </Button>
+        )}
+      </div>
+      {!multipleButtonBottom && (
+        <ButtonBottomMobile
+          onClickSingleButton={() =>
+            onClickLeft(
+              action_button_detail?.action_button_detail?.[0]?.buttonText
+            )
+          }
+          onToggle={onToggle}
+          textSingleButton={
+            action_button_detail?.action_button_detail?.[0]?.buttonText
+          }
+          colorButton={action_button_detail?.action_button_detail?.[0]?.color}
+          isSingleButton
+        />
+      )}
+      {multipleButtonBottom && (
+        <ButtonBottomMobile
+          onClickLeft={() =>
+            onClickLeft(action_button_detail.action_button_detail[0].buttonText)
+          }
+          onClickRight={() =>
+            onClickRight(
+              action_button_detail.action_button_detail[1].buttonText
+            )
+          }
+          textLeft={action_button_detail.action_button_detail[0].buttonText}
+          textRight={action_button_detail.action_button_detail[1].buttonText}
+          leftColor={action_button_detail.action_button_detail[0].color}
+          rightColor={action_button_detail.action_button_detail[1].color}
+          onToggle={onToggle}
+        />
+      )}
+    </div>
+  );
+}
+
+export default OtherStatus;
+
+function YellowStatus({ title, text, date }) {
+  return (
+    <div className="p-4 bg-warning-100 flex gap-3">
+      <span className="w-[42px] h-[42px]">
+        <Image
+          src={
+            process.env.NEXT_PUBLIC_ASSET_REVERSE + "/img/pesanan-direspon.png"
+          }
+          className="w-full h-full"
+          width={42}
+          height={42}
+          alt="direspon"
+        />
+      </span>
+      <div
+        style={{ width: "calc(100% - 32px - 42px - 10px)" }}
+        className="flex flex-col gap-[10px] w-full"
+      >
+        <span className="text-warning-900 bold-xs">
+          {title ? title : "Menunggu Respon Penjual"}
+        </span>
+        {!text ? (
+          <p className="text-neutral-900 semi-xs">
+            Menunggu respon penjual <b>paling lama pada {date}</b>. Apabila
+            dalam waktu tersebut penjual tidak merespon, maka pesananmu akan
+            otomatis dibatalkan dan dana akan dikembalikan ke kamu
+          </p>
+        ) : (
+          <p
+            className="text-neutral-900 semi-xs"
+            dangerouslySetInnerHTML={{ __html: text }}
+          ></p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BlueStatus({ data }) {
+  return (
+    <div className="p-4 bg-primary-50 flex gap-3">
+      <span className="w-[42px] h-[42px]">
+        <Image
+          src={
+            process.env.NEXT_PUBLIC_ASSET_REVERSE + "/img/pesanan-dikirim.png"
+          }
+          className="w-full h-full"
+          width={42}
+          height={42}
+          alt="direspon"
+        />
+      </span>
+      <div
+        style={{ width: "calc(100% - 32px - 42px - 10px)" }}
+        className="flex flex-col gap-[10px]"
+      >
+        <span className="text-primary-700 bold-xs">{data?.title_text}</span>
+        <p className="text-neutral-900 semi-xs">{data?.subtitle_text}</p>
+      </div>
+    </div>
+  );
+}
+function GreenStatus({ data }) {
+  return (
+    <div className="p-4 bg-success-50 flex gap-3">
+      <span className="w-[42px] h-[42px]">
+        <Image
+          src={process.env.NEXT_PUBLIC_ASSET_REVERSE + "/img/pesanan-tiba.png"}
+          className="w-full h-full"
+          width={42}
+          height={42}
+          alt="direspon"
+        />
+      </span>
+      <div
+        className="flex flex-col gap-[10px]"
+        style={{ width: "calc(100% - 44px)" }}
+      >
+        <span className="text-primary-700 bold-xs">{data?.title_text}</span>
+        <p className="text-neutral-900 semi-xs">{data?.subtitle_text}</p>
+      </div>
+    </div>
+  );
+}
+function RedStatus({ data }) {
+  return (
+    <div className="p-4 bg-error-50 flex gap-3 terr">
+      <span className="w-[42px] h-[42px]">
+        <Image
+          src={
+            process.env.NEXT_PUBLIC_ASSET_REVERSE +
+            "/img/pesanan-dikomplain.png"
+          }
+          className="w-full h-full"
+          width={42}
+          height={42}
+          alt="direspon"
+        />
+      </span>
+      <div
+        className="flex flex-col gap-[10px]"
+        style={{ width: "calc(100% - 44px)" }}
+      >
+        <span className="text-error-400 bold-xs">{data?.title_text}</span>
+        <p className="text-neutral-900 semi-xs">{data?.subtitle_text}</p>
+        {/* <span className='mt-[10px] select-none text-primary-700'>Lihat Detail Komplain</span> */}
+      </div>
+    </div>
+  );
+}
+function Selesai({ data, text }) {
+  return (
+    <div className="p-4 bg-success-50 flex gap-3">
+      <Image
+        src={process.env.NEXT_PUBLIC_ASSET_REVERSE + "/img/pesanan-selesai.png"}
+        width={42}
+        height={42}
+        alt="direspon"
+      />
+      <div className="flex flex-col gap-[10px]">
+        <span className="text-primary-700 bold-xs">Selesai</span>
+        {text ? (
+          text
+        ) : (
+          <p className="text-neutral-900 semi-xs">
+            Pesananmu telah selesai pada <b>{date}</b>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+function DibatalkanSystem({ text }) {
+  const { t } = useLanguage();
+  return (
+    <div className="p-4 bg-error-50 flex gap-3">
+      <Image
+        src={
+          process.env.NEXT_PUBLIC_ASSET_REVERSE + "/img/pesanan-dikomplain.png"
+        }
+        width={42}
+        height={42}
+        alt="direspon"
+      />
+      <div className="flex flex-col gap-[10px]">
+        <span className="text-error-400 bold-xs">
+          {t("AppMuatpartsDaftarPesananBuyerDibatalkanSistem")}
+        </span>
+        <p className="text-neutral-900 semi-xs">{text}</p>
+      </div>
+    </div>
+  );
+}

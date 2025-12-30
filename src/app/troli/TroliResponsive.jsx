@@ -1,0 +1,392 @@
+import { useHeader } from "@/common/ResponsiveContext";
+import React, { useEffect, useMemo, useState } from "react";
+import style from "./Troli.module.scss";
+import CartItem from "./components/mobile/CartItem";
+import DataEmpty from "@/components/DataEmpty/DataEmpty";
+import ProductGrid from "@/components/ProductsSectionComponent/ProductGrid";
+import { useLanguage } from "@/context/LanguageContext";
+import Button from "@/components/Button/Button";
+import Checkbox from "@/components/Checkbox/Checkbox";
+import useTroliStore from "@/store/troli";
+import { numberFormatMoney } from "@/libs/NumberFormat";
+import SWRHandler from "@/services/useSWRHook";
+import { useCheckoutStore } from "@/store/checkout";
+import ModalComponent from "@/components/Modals/ModalComponent";
+import { useCustomRouter } from "@/libs/CustomRoute";
+import ListAddressContainerMobile from "@/containers/ListAddressContainerMobile/ListAddressContainerMobile";
+import MuatpartsVoucher from "@/containers/MuatpartsVoucher/MuatpartsVoucher";
+import useVoucherMuatpartsStore from "@/store/useVoucherMuatpartsStore";
+import { getVoucherValue } from "@/libs/voucher";
+import { getVoucherValues as muatpartsVoucherValue } from "@/utils/voucher";
+import toast from "@/store/toast";
+import Bottomsheet from "@/components/Bottomsheet/Bottomsheet";
+import VoucherCheckout from "@/components/VoucherMobile/VoucherCheckout";
+
+
+// 24. THP 2 - MOD001 - MP - 024 - QC Plan - Web - MuatParts - Voucher Buyer - LB - 0040
+function TroliResponsive({
+  carts: initialCarts,
+  summary,
+  yourWishlist,
+  recommendedProducts,
+  voucherData,
+  mutateCart,
+  isLoading,
+}) {
+  const {
+    appBarType, //pilih salah satu : 'header_title_secondary' || 'header_search_secondary' || 'default_search_navbar_mobile' || 'header_search' || 'header_title'
+    appBar, // muncul ini : {onBack:null,title:'',showBackButton:true,appBarType:'',appBar:null,header:null}
+    renderAppBarMobile, // untuk render komponen header mobile dengan memasukkanya ke useEffect atau by trigger function / closer
+    setAppBar, // tambahkan payload seperti ini setAppBar({onBack:()=>setScreen('namaScreen'),title:'Title header',appBarType:'type'})
+    handleBack, // dipanggil di dalam button di luar header, guna untuk kembali ke screen sebelumnya
+    clearScreen, // reset appBar
+    setScreen, // set screen
+    screen, // get screen,
+    search, // {placeholder:'muatparts',value:'',type:'text'}
+    setSearch, // tambahkan payload seperti ini {placeholder:'Pencarian',value:'',type:'text'}
+  } = useHeader();
+  const { t } = useLanguage();
+  const { setBuyNow } = useCheckoutStore();
+  const { setSelectedVouchers, submittedVouchers, setPrice } =
+    useVoucherMuatpartsStore();
+  const {
+    setShowBottomsheet,
+    setTitleBottomsheet,
+    setDataBottomsheet,
+  } = toast();
+
+  const { setShowToast, setDataToast } = toast();
+
+  const router = useCustomRouter();
+  useEffect(() => {
+    setAppBar({
+      title: "Troli",
+      appBarType: "header_title",
+    });
+  }, []);
+
+  const { setCartDelete, setCartPut } = useTroliStore();
+
+  const [carts, setCarts] = useState([]);
+  const [modalDelete, setModalDelete] = useState(false);
+  const [getIndexLocationMultiple, setIndexLocationMultiple] = useState({
+    index: 0,
+    location: {},
+  });
+
+  useEffect(() => {
+    setCarts(initialCarts);
+  }, [initialCarts]);
+
+  const { useSWRMutateHook } = SWRHandler();
+
+  const PUT_CART_ENDPOINT = "v1/muatparts/cart/items";
+  const { data: resBatchUpdate, trigger: triggerBatchUpdate } =
+    useSWRMutateHook(PUT_CART_ENDPOINT + `/batch-update`, "PUT");
+
+  const allItemsChecked = carts.every((order) =>
+    order.items.every((item) => item.Checked === true)
+  );
+
+  const checkedItemsCount = useMemo(() => {
+    return carts.reduce((total, prod) => {
+      return total + prod.items.filter((item) => item.Checked).length;
+    }, 0);
+  }, [carts]);
+
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0499
+  function transformCartData(inputData) {
+    return inputData
+      .filter((cartItem) =>
+        cartItem?.items?.some((item) => item.Checked === true)
+      )
+      .map((cartItem) => {
+        return {
+          cartID: cartItem?.id || null,
+          sellerID: cartItem?.seller?.id,
+          locationID: cartItem?.destinationAddress?.id || "",
+          usedVouchers: cartItem?.sellerVouchers,
+          products: cartItem?.items
+            .filter((item) => item.Checked === true)
+            .map((item) => ({
+              id: item?.ProductID,
+              variantID: item?.Variant?.id || "",
+              qty: item?.Quantity,
+              notes: item?.Notes || "",
+            })),
+          price: cartItem?.items
+            .filter((item) => item.Checked === true)
+            .reduce(
+              (total, item) => total + item.Quantity * item.PriceAfterDiscount,
+              0
+            ),
+        };
+      });
+  }
+
+  const setAllChecked = (checked) => {
+    setCarts((prevCarts) =>
+      prevCarts.map((cart) => ({
+        ...cart,
+        items: cart.items.map((item) => ({
+          ...item,
+          Checked: checked,
+        })),
+      }))
+    );
+  };
+  const handleUseSellerVouchers = (data, index) => {
+    setCarts((prevCarts) => {
+      const newCarts = [...prevCarts];
+      newCarts[index] = {
+        ...newCarts[index],
+        sellerVouchers: data,
+      };
+      return newCarts;
+    });
+  };
+
+  const handleSelectAll = async (checked) => {
+    const payload = {
+      itemIds: carts.flatMap((order) => order.items.map((item) => item.ID)),
+      isChecked: checked,
+    };
+    await triggerBatchUpdate(payload);
+    setAllChecked(checked);
+  };
+
+  const hapusMassal = () => setModalDelete(true);
+
+  const handleDeleteProduct = () => {
+    setModalDelete(false);
+    setCartDelete({
+      itemIds: carts.flatMap((order) =>
+        order.items.filter((item) => item.Checked).map((item) => item.ID)
+      ),
+    });
+  };
+
+  useEffect(() => {
+    if (resBatchUpdate?.data?.Message.Code === 200) {
+      mutateCart();
+    }
+  }, [resBatchUpdate]);
+
+  useEffect(() => {
+    if (screen === "troli_ubah_lokasi")
+      setAppBar({
+        title: "Pilih Alamat Tujuan",
+        appBarType: "header_title",
+        onBack: () => setScreen(""),
+      });
+  }, [screen]);
+
+  const totalSellerPurchaseVouchers = carts.reduce((total, transaction) => {
+    let voucherValue = 0;
+    if (transaction.sellerVouchers?.voucherProduct) {
+      voucherValue += getVoucherValue(
+        transaction.sellerVouchers.voucherProduct,
+        summary.subtotal
+      );
+    }
+    return total + voucherValue;
+  }, 0);
+
+  const totalPayment = Math.max(
+    0,
+    summary.subtotal - totalSellerPurchaseVouchers
+  );
+
+  const totalMuatpartsPurchaseVouchers =
+    muatpartsVoucherValue(submittedVouchers, totalPayment).purchase || 0;
+
+  const finalPayment = totalPayment - totalMuatpartsPurchaseVouchers;
+
+  useMemo(() => setPrice(totalPayment), [totalPayment]);
+
+  console.log("penting", {
+    "1 total awal": summary.subtotal,
+    "2 total voucher penjual": totalSellerPurchaseVouchers,
+    "3 total setelah voucher penjual": totalPayment,
+    "4 total voucher muatparts": totalMuatpartsPurchaseVouchers,
+    "5 total akhir": finalPayment,
+  });
+
+  if (screen === "troli_ubah_lokasi") {
+    return (
+      <ListAddressContainerMobile
+        address={getIndexLocationMultiple.location}
+        preventDefaultSelected={true}
+        onSave={(e) => {
+          console.log("e", e);
+          setScreen("");
+        }}
+        onChoose={(e) =>
+          setIndexLocationMultiple((a) => ({ ...a, location: e }))
+        }
+      />
+    );
+  }
+
+  // PRIO : 8 - 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - Prio 8 - LB - 0200
+  return (
+    <div
+      className={`bg-neutral-100 min-h-screen relative ${style.main} ${
+        carts?.length > 0 ? "mb-[108px]" : ""
+      }`}
+    >
+      <ModalComponent
+        isOpen={modalDelete}
+        setClose={() => setModalDelete(false)}
+        hideHeader
+        classnameContent={"py-6 px-4 text-center w-[296px] space-y-3"}
+      >
+        <div className="font-bold !mt-0">Hapus {checkedItemsCount} produk</div>
+        <div className="text-sm font-medium">
+          produk yang kamu pilih akan dihapus dari Troli
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            Class="h-7 !font-semibold"
+            children="Batal"
+            color="primary_secondary"
+            onClick={() => setModalDelete(false)}
+          />
+          <Button
+            Class="h-7 !font-semibold"
+            children="Ya"
+            color="primary"
+            onClick={() => handleDeleteProduct()}
+          />
+        </div>
+      </ModalComponent>
+      {checkedItemsCount > 0 && (
+        <div
+          className={`flex justify-between bg-white relative px-[16px] py-[16px] h-[50px]`}
+        >
+          <div className={`text-[12px] text-black`}>
+            {checkedItemsCount} Produk dipilih
+          </div>
+          <div
+            onClick={hapusMassal}
+            className={`text-[12px] text-[rgb(23,108,247)]`}
+          >
+            Hapus Massal
+          </div>
+        </div>
+      )}
+      {carts?.length > 0 ? (
+        <>
+          {carts.map((cart, index) => (
+            <CartItem
+              key={cart.seller}
+              seller={cart.seller}
+              address={cart.destinationAddress}
+              products={cart.items}
+              onPutCart={setCartPut}
+              mutateCart={mutateCart}
+              selectedVouchers={cart.sellerVouchers || {}}
+              openVouchers={() => {
+                setShowBottomsheet(true);
+                setTitleBottomsheet(`Pilih Voucher ${cart.seller.name}`);
+                setDataBottomsheet(
+                  <VoucherCheckout
+                    key={index}
+                    seller_id={cart.seller.id}
+                    seller_name={cart.seller.name}
+                    onSubmit={(rest) => handleUseSellerVouchers(rest, index)}
+                    product_ids={cart.items
+                      .filter((item) => item.Checked)
+                      .map((item) => item.ProductID)}
+                    transaction={cart.subtotal}
+                  />
+                );
+              }}
+            />
+          ))}
+
+          <div className="fixed bottom-0 bg-white p-4 shadow-muatmuat z-50 w-full">
+            <MuatpartsVoucher />
+
+            <div className="flex justify-between items-center gap-3 mt-3">
+              <div className="flex gap-6 justify-between w-full">
+                <Checkbox
+                  label="Semua"
+                  checked={allItemsChecked}
+                  classname={"font-medium text-xs"}
+                  onChange={(e) => handleSelectAll(e.checked)}
+                />
+                <div className="text-right">
+                  <div className="font-medium text-[10px] text-neutral-600">
+                    Total
+                  </div>
+                  <div className="font-bold">
+                    {numberFormatMoney(finalPayment)}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  color="primary"
+                  onClick={async () => {
+                    console.log("carts", carts);
+                    const hasCheckedItems = carts.some((cart) =>
+                      cart.items.some((item) => item.Checked)
+                    );
+                    if (!hasCheckedItems) {
+                      setDataToast({
+                        type: "error",
+                        message: "Pilih barang sebelum membeli",
+                      });
+                      setShowToast(true);
+                      return;
+                    }
+                    await setBuyNow(transformCartData(carts));
+                    // 25. 15 - QC Plan - Web - Imp Voucher muatparts - LB - 0031
+                    router.push("/checkout?from=troli");
+                  }}
+                  Class="!h-10 !font-semibold"
+                >
+                  Beli
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <Bottomsheet />
+        </>
+      ) : (
+        <DataEmpty
+          title="Wah, troli belanjamu kosong"
+          subtitle="Yuk, isi dengan barang-barang impianmu!"
+          buttonText="Cari Produk"
+        />
+      )}
+
+      <div className="mx-auto w-full px-4">
+        {yourWishlist.length > 0 && (
+          <ProductGrid
+            totalProducts={yourWishlist.map((item) => ({
+              ...item,
+              AtTroli: true,
+            }))}
+            title={t("labelProdukWishlist")}
+            grid={2}
+          />
+        )}
+        {recommendedProducts.length > 0 && (
+          <ProductGrid
+            totalProducts={recommendedProducts.map((item) => ({
+              ...item,
+              AtTroli: true,
+            }))}
+            title={t("labelRekomendasiProdukLain")}
+            grid={2}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default TroliResponsive;

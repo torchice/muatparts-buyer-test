@@ -1,0 +1,92 @@
+"use client";
+import { viewport } from "@/store/viewport";
+import React, { useState } from "react";
+import HomePageResponsive from "./HomePageResponsive";
+import HomePageWeb from "./HomePageWeb";
+import SWRHandler from "@/services/useSWRHook";
+import { headerImages, promotionImages } from "./mock";
+
+function HomePage() {
+  const [state, setState] = useState();
+  const { useSWRHook, useSWRMutateHook } = SWRHandler();
+
+  // Options
+  const VEHICLE_OPTIONS_ENDPOINT = "v1/muatparts/garasi/vehicle";
+  const BRAND_OPTIONS_ENDPOINT = "v1/muatparts/garasi/brand";
+  const YEAR_OPTIONS_ENDPOINT = "v1/muatparts/garasi/years";
+  const MODEL_OPTIONS_ENDPOINT = "v1/muatparts/garasi/model";
+  const TYPE_OPTIONS_ENDPOINT = "v1/muatparts/garasi/type";
+
+  // Products
+  const PRODUCT_MOST_VIEWED_ENDPOINT = "v1/muatparts/product/most_viewed?size=18";
+  const PRODUCT_RECOMMENDED_ENDPOINT = "v1/muatparts/product/recommended?size=18";
+  const PRODUCT_LASTVIEWED_ENDPOINT = "v1/muatparts/product/last_viewed?size=18";
+
+  // Images
+  const BANNER_IMAGES_ENDPOINT = "v1/muatparts/product/promo";
+  const JOINED_SELLERS_ENDPOINT = "v1/muatparts/landing/partners";
+  const HEADER_IMAGES_ENDPOINT = "v1/muatparts/banner_promo";
+  // Options
+  const { data: vehicleOptions } = useSWRHook(VEHICLE_OPTIONS_ENDPOINT);
+  const { data: brandOptions } = useSWRHook(BRAND_OPTIONS_ENDPOINT);
+  const { data: yearOptions } = useSWRHook(YEAR_OPTIONS_ENDPOINT);
+  const { data: modelOptions } = useSWRHook(MODEL_OPTIONS_ENDPOINT);
+  const { data: typeOptions } = useSWRHook(TYPE_OPTIONS_ENDPOINT);
+
+  // Products
+  const { data: mostVisitedProducts } = useSWRHook(PRODUCT_MOST_VIEWED_ENDPOINT);
+  const { data: youMightLike } = useSWRHook(PRODUCT_RECOMMENDED_ENDPOINT);
+  const { data: lastSeenProducts } = useSWRHook(PRODUCT_LASTVIEWED_ENDPOINT);
+
+  // Images
+  const { data: headerImages } = useSWRHook(HEADER_IMAGES_ENDPOINT);
+  const { data: bannerImages } = useSWRHook(BANNER_IMAGES_ENDPOINT);
+  const { data: joinedSellers } = useSWRHook(JOINED_SELLERS_ENDPOINT);
+
+  const { isMobile } = viewport();
+  if (typeof isMobile !== "boolean") return <></>; //buat skeleton
+  if (isMobile)
+    return (
+      <HomePageResponsive
+        // Options
+        vehicleOptions={vehicleOptions?.Data ?? []}
+        brandOptions={brandOptions?.Data ?? []}
+        yearOptions={yearOptions?.Data ?? []}
+        modelOptions={modelOptions?.Data ?? []}
+        typeOptions={typeOptions?.Data ?? []}
+        // Products
+        lastSeenProducts={lastSeenProducts?.Data ?? []}
+        mostVisitedProducts={mostVisitedProducts?.Data ?? []}
+        youMightLike={youMightLike?.Data ?? []}
+        // Images
+        headerImages={headerImages?.Data?.app ?? []}
+        bannerImages={bannerImages?.Data ?? []}
+        promotionImages={headerImages?.Data?.app ?? []}
+        joinedSellers={joinedSellers?.Data ?? []}
+      />
+    );
+  return (
+    <>
+   
+      <HomePageWeb
+        // Options
+        vehicleOptions={vehicleOptions?.Data ?? []}
+        brandOptions={brandOptions?.Data ?? []}
+        yearOptions={yearOptions?.Data ?? []}
+        modelOptions={modelOptions?.Data ?? []}
+        typeOptions={typeOptions?.Data ?? []}
+        // Products
+        lastSeenProducts={lastSeenProducts?.Data ?? []}
+        mostVisitedProducts={mostVisitedProducts?.Data ?? []}
+        youMightLike={youMightLike?.Data ?? []}
+        // Images
+        headerImages={headerImages?.Data.web ?? []}
+        bannerImages={bannerImages?.Data ?? []}
+        promotionImages={headerImages?.Data.web ?? []}
+        joinedSellers={joinedSellers?.Data ?? []}
+      />
+    </>
+  );
+}
+
+export default HomePage;

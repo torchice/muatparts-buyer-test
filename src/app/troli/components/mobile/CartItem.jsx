@@ -1,0 +1,130 @@
+import Checkbox from "@/components/Checkbox/Checkbox";
+import { ChevronRight, MapPin } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import Product from "./Product";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import SWRHandler from "@/services/useSWRHook";
+import { useHeader } from "@/common/ResponsiveContext";
+
+// 24. THP 2 - MOD001 - MP - 024 - QC Plan - Web - MuatParts - Voucher Buyer - LB - 0040
+const CartItem = ({
+  seller,
+  address,
+  products: initialProduct,
+  onPutCart,
+  mutateCart,
+  selectedVouchers,
+  openVouchers = () => {},
+}) => {
+  const { setScreen } = useHeader();
+
+  const PUT_CART_ENDPOINT = "v1/muatparts/cart/items";
+
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    setProducts(initialProduct);
+  }, [initialProduct]);
+
+  const { useSWRMutateHook } = SWRHandler();
+
+  const { data: resBatchUpdate, trigger: triggerBatchUpdate } =
+    useSWRMutateHook(PUT_CART_ENDPOINT + `/batch-update`, "PUT");
+
+  const allSelected = products?.every((item) => item.Checked);
+  const someSelected = products?.some((item) => item.Checked);
+
+  const handleCheck = (checked) => {
+    const payload = {
+      itemIds: products.map((item) => item.ID),
+      isChecked: checked,
+    };
+
+    setProducts((prevItems) =>
+      prevItems.map((item) => ({
+        ...item,
+        Checked: checked,
+      }))
+    );
+
+    triggerBatchUpdate(payload);
+  };
+
+  useEffect(() => {
+    if (resBatchUpdate?.data?.Message.Code === 200) {
+      mutateCart();
+    }
+  }, [resBatchUpdate]);
+
+  const hasVouchers =
+    Boolean(selectedVouchers?.voucherProduct) ||
+    Boolean(selectedVouchers?.voucherOngkir);
+
+  delete selectedVouchers.sellerID
+
+  const evaluateVouchers = (v) =>
+    Object.values(v).filter(Boolean).length === 2
+      ? 2
+      : Object.values(v).filter(Boolean).length === 0
+      ? 0
+      : 1;
+
+  return (
+    <div className="mt-2 first:mt-0">
+      <div className="bg-neutral-50 py-6 px-4 flex flex-col gap-4">
+        <Checkbox
+          label={seller.name}
+          classname={"font-semibold"}
+          checked={allSelected}
+          onChange={(e) => handleCheck(e.checked)}
+        />
+        <div className="flex items-center px-4 py-2 bg-neutral-200 gap-2 rounded-md">
+          <MapPin size={16} className="text-neutral-700" />
+          <div className="font-medium text-xs capitalize">
+            Dikirim dari : {seller?.city?.toLowerCase()}
+          </div>
+        </div>
+        <button
+          className="flex items-center justify-between px-4 py-2  rounded-md border border-neutral-400"
+          onClick={() => setScreen("troli_ubah_lokasi")}
+        >
+          <div className="flex items-center gap-2">
+            <MapPin size={16} className="text-neutral-700" />
+            <div className="font-medium text-xs capitalize">
+              Dikirim ke : <strong>{address?.name?.toLowerCase()}</strong>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-neutral-700" />
+        </button>
+
+        {/* <pre>{JSON.stringify(products, null, 2)}</pre> */}
+
+        {products.map((product) => (
+          <Product
+            product={product}
+            address={address}
+            onPutCart={onPutCart}
+            mutateCart={mutateCart}
+          />
+        ))}
+      </div>
+
+      <button
+        className="w-full flex justify-between items-center bg-muat-parts-non-50 text-muat-parts-non-800 py-2 px-4"
+        onClick={() => openVouchers()}
+      >
+        <div className="flex items-center gap-3">
+          <IconComponent
+            src={"/icons/voucher-red.svg"}
+            height={28}
+            width={28}
+          />
+          <div className="font-semibold text-sm">{hasVouchers ? evaluateVouchers(selectedVouchers) + ' Voucher Terpakai' : 'Gunakan Voucher Penjual'}</div>
+        </div>
+        <ChevronRight />
+      </button>
+    </div>
+  );
+};
+
+export default CartItem;

@@ -1,0 +1,15 @@
+
+'use client';
+import Image from 'next/image';
+function ImageComponent({src,width,height,alt,className,...props}) {
+    return <Image 
+    src={process.env.NEXT_PUBLIC_ASSET_REVERSE+src} 
+    width={width} 
+    height={height} 
+    className={className}
+    alt={alt}
+    {...props}/>
+}
+
+export default ImageComponent;
+  

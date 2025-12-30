@@ -1,0 +1,25 @@
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+
+export const userZustand = create(persist(
+    (set)=>({
+        id:'',
+        name:'',
+        phone:'',
+        role:'',
+        photo:'',
+        setUser:val=>set(val),
+        setUserBy:(field,val)=>set({[field]:val}),
+        removeUser:()=>set({
+            id:'',
+            name:'',
+            phone:'',
+            role:'',
+            photo:'',
+        })
+    }),
+    {
+        name:'t-ng',
+        storage:createJSONStorage(()=>localStorage)
+    }
+))

@@ -1,0 +1,178 @@
+/**
+ * Formats order data and calculates various totals such as product price, shipping cost, 
+ * insurance cost, vouchers, and overall total payment.
+ *
+ * @param {Array} orderData - Array of order objects containing details about products, shipping, and vouchers.
+ * @param {Object} [params={}] - Additional parameters for fees.
+ * @param {number} [params.appFee=0] - Application fee to be added to the total payment.
+ * @param {number} [params.adminFee=0] - Administrative fee to be added to the total payment.
+ * @returns {{
+*   totalProduct: number,
+*   totalShippingCost: number,
+*   totalInsuranceCost: number,
+*   productPrice: Array<{ id: (string|null), subtotal: number, sellerId?: (string|null) }>,
+*   shippingCost: Array<{ id: (string|null), cost: number, sellerId?: (string|null) }>,
+*   productVoucher: Array<{ name: string, value: number, sellerId?: (string|null), orderId?: (string|null) }>,
+*   shippingVoucher: Array<{ name: string, value: number, sellerId?: (string|null), orderId?: (string|null), appliedValue?: number }>,
+*   shippingMuatparts: number,
+*   productMuatparts: number,
+*   appFee: number,
+*   adminFee: number,
+*   totalPrice: number,
+*   totalPayment: number
+* }} - An object containing formatted order data and calculated totals.
+*/
+export function formatOrderData(orderData, params = {}) {
+ // Return empty object if no data
+ if (!orderData || !Array.isArray(orderData) || orderData.length === 0) {
+   return {
+     totalProduct: 0,
+     totalShippingCost: 0,
+     totalInsuranceCost: 0,
+     productPrice: [{ id: null, subtotal: 0 }],
+     shippingCost: [{ id: null, cost: 0 }],
+     productVoucher: [{ name: "", value: 0 }],
+     shippingVoucher: [{ name: "", value: 0 }],
+     shippingMuatparts: 0,
+     productMuatparts: 0,
+     appFee: params.appFee || 0,
+     adminFee: params.adminFee || 0,
+     totalPrice: 0,
+     totalPayment: (params.appFee || 0) + (params.adminFee || 0)
+   };
+ }
+
+ let result = {
+   totalProduct: 0,
+   totalShippingCost: 0,
+   totalInsuranceCost: 0,
+   productPrice: [],
+   shippingCost: [],
+   productVoucher: [],
+   shippingVoucher: [],
+   shippingMuatparts: 0,
+   productMuatparts: 0,
+   appFee: params.appFee || 0,
+   adminFee: params.adminFee || 0,
+   totalPrice: 0,
+   totalPayment: 0
+ };
+
+ // Process each order
+ orderData.forEach((order) => {
+   // Calculate total product count
+   result.totalProduct += order.countProduct || 0;
+
+   // Process product prices
+   if (order.products && Array.isArray(order.products)) {
+     order.products.forEach((product) => {
+       result.productPrice.push({
+         id: product.id || null,
+         subtotal: product.subtotal || 0,
+         sellerId: order.seller?.id || null,
+       });
+       
+       // Add to totalPrice (sum of all product subtotals)
+       result.totalPrice += product.subtotal || 0;
+     });
+   }
+
+   // Process shipping cost
+   if (order.selectedShippingCost) {
+     // Use buyerCost for calculations as per the document
+     result.totalShippingCost += order.selectedShippingCost.buyerCost || 0;
+     result.shippingCost.push({
+       id: order.selectedShippingCost.id || null,
+       cost: order.selectedShippingCost.buyerCost || 0,
+       sellerId: order.seller?.id || null,
+     });
+
+     // Calculate insurance cost if used
+     if (order.selectedShippingCost.isUseInsurance) {
+       result.totalInsuranceCost += order.selectedShippingCost.buyerInsurance || 0;
+     }
+   }
+
+   // Process vouchers
+   if (order.usedVouchers) {
+     // Shipping voucher
+     if (
+       order.usedVouchers.dataUsedVoucher &&
+       order.usedVouchers.dataUsedVoucher.voucherType === "Biaya Pengiriman"
+     ) {
+       // Calculate the actual applied amount (min of voucher and shipping cost)
+       const voucherValue = parseFloat(order.usedVouchers.dataUsedVoucher.discountValue) || 0;
+       const shippingCost = order.selectedShippingCost?.buyerCost || 0;
+       const appliedValue = Math.min(voucherValue, shippingCost);
+
+       result.shippingVoucher.push({
+         name: order.usedVouchers.dataUsedVoucher.voucherName || "",
+         value: voucherValue,
+         sellerId: order.seller?.id || null,
+         orderId: order.orderId || null,
+         appliedValue: appliedValue,
+       });
+     }
+
+     // Product voucher
+     if (
+       order.usedVouchers.dataUsedTransaction &&
+       order.usedVouchers.dataUsedTransaction.voucherType === "Diskon Produk"
+     ) {
+       result.productVoucher.push({
+         name: order.usedVouchers.dataUsedTransaction.voucherName || "",
+         value: parseFloat(order.usedVouchers.dataUsedTransaction.discountValue) || 0,
+         sellerId: order.seller?.id || null,
+         orderId: order.orderId || null,
+       });
+     }
+   }
+
+   // Calculate total payment for this order
+   const productTotal = order.totalAmount || 0;
+   const shippingCost = order.selectedShippingCost?.buyerCost || 0;
+   const insuranceCost = order.selectedShippingCost?.isUseInsurance
+     ? order.selectedShippingCost.buyerInsurance || 0
+     : 0;
+
+   // Get product voucher value for this order
+   const productVoucherValue = order.usedVouchers?.dataUsedTransaction
+     ? parseFloat(order.usedVouchers.dataUsedTransaction.discountValue) || 0
+     : 0;
+
+   // Get shipping voucher value for this order (limited to actual shipping cost)
+   const shippingVoucherValue = order.usedVouchers?.dataUsedVoucher
+     ? parseFloat(order.usedVouchers.dataUsedVoucher.discountValue) || 0
+     : 0;
+   const appliedShippingVoucher = Math.min(shippingVoucherValue, shippingCost);
+
+   // Add to total payment
+   const orderTotal = productTotal + shippingCost + insuranceCost - productVoucherValue - appliedShippingVoucher;
+   result.totalPayment += orderTotal;
+ });
+
+ // Add fees to the total payment at the end
+ result.totalPayment += (params.appFee || 0) + (params.adminFee || 0);
+
+ // If empty arrays, provide default values
+ if (result.productPrice.length === 0) {
+   result.productPrice = [{ id: null, subtotal: 0 }];
+ }
+
+ if (result.shippingCost.length === 0) {
+   result.shippingCost = [{ id: null, cost: 0 }];
+ }
+
+ if (result.productVoucher.length === 0) {
+   result.productVoucher = [{ name: "", value: 0 }];
+ }
+
+ if (result.shippingVoucher.length === 0) {
+   result.shippingVoucher = [{ name: "", value: 0 }];
+ }
+
+ return result;
+}
+
+// Example usage:
+// const formattedData = formatOrderData(orderDataArray);

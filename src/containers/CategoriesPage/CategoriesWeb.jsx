@@ -1,0 +1,225 @@
+
+'use client';
+import BreadCrumb from '@/components/Breadcrumb/Breadcrumb';
+import style from './Categories.module.scss'
+import { useEffect, useState } from 'react';
+import IconComponent from '@/components/IconComponent/IconComponent';
+import Link from 'next/link'
+import { categoriesZustand } from '@/store/products/categoriesZustand';
+import Button from '@/components/Button/Button';
+import Image from 'next/image';
+import ProductComponent from '@/components/ProductComponent/ProductComponent';
+import MultipleItems from '@/components/ReactSlick/MultipleItems';
+import CustomLink from '@/components/CustomLink';
+import { useCustomRouter } from '@/libs/CustomRoute';
+
+import DataNotFound from '@/components/DataNotFound/DataNotFound';
+import { useLanguage } from '@/context/LanguageContext';
+import ProductComponentSkeleton from '@/components/ProductComponent/ProductComponentSkeleton';
+
+// Improvement fix wording Pak Brian
+function CategoriesWeb({params,searchParams,products,bannerImages, isLoading, loadingFetchBanner}) {
+    const { t } = useLanguage()
+    const router =useCustomRouter()
+    const [getExpanded, setExpanded] = useState([])
+    const {categoryFamily,categories:cats,getSubAndItem}=categoriesZustand()
+    function handleExpanded(id) {
+        if (getExpanded.some(val => val === id)) {
+            let tmp = getExpanded.filter(val => val !== id);
+            setExpanded(tmp);
+        } else {
+            setExpanded(prev => [...prev, id]);
+        }
+    }
+    const categoryLabel = categoryFamily?.map(val=>val?.value)?.toString().replace(","," dan ")
+    function handleRedirect(sub,item) {
+        router.push(`${sub}/${item}`)
+    }
+    function handleClickBreadcrumb(val) {
+        const base_level = categoryFamily?.map(val=>val?.id)||[]
+        if(base_level?.indexOf(val?.id)==0) return router.push(`/products?groupcategoryID=${base_level[0]},&categoryID=${base_level[1]},`)
+        else if(base_level?.indexOf(val?.id)==1) return router.push(`/products?categoryID=${base_level[1]},`)
+        else return
+      }
+    useEffect(()=>{
+        if(getSubAndItem?.length){
+            setExpanded(getSubAndItem?.map(val=>val?.id))
+        }
+    },[getSubAndItem])
+    return (
+        <div className={style.main}>
+            <div className='w-full max-w-[1280px] m-auto px-10'>
+                <BreadCrumb maxWidth={'100%'} classname={style.breadcrumb} data={products?.length?[{id:'home',name:'Home'},...categoryFamily?.map(val=>({id:val?.id,name:val?.value}))]:[]} onclick={handleClickBreadcrumb} />
+                {!loadingFetchBanner?(bannerImages.length?<div className='w-full h-auto flex justify-center'>
+                    <div className='w-full max-h-[250px] max-w-[1000px] mt-4'>
+                        <MultipleItems 
+                            images={bannerImages.map((val) => val.Image)}
+                            urls={bannerImages.map((val) => val.Url)} 
+                            settings={{
+                                slidesToShow: 1,
+                                slidesToScroll: 1,
+                                autoplay: true,
+                                autoplaySpeed: 3000,
+                                dots: true,
+                            }}
+                            size={1000}
+                            className="rounded-xl" 
+                        />
+                    </div>
+                </div>:''):(
+                    <div className="w-full h-auto flex justify-center">
+                        <div className="h-[250px] w-[1000px] bg-gray-300 animate-pulse rounded-xl"/>
+                    </div>
+                )}
+                <div className={`mt-6 flex gap-[38px] w-full ${products?.length?'justify-between':'justify-center'}`}>
+                    {!!(products?.length)&&<div className="flex flex-col bg-neutral-50 border border-neutral-400 rounded-md p-4 gap-4 w-[264px] h-fit">
+                        <span className="text-xl text-[#1b1b1b] font-bold">{t('LabelfilterProdukKategori')} {categoryLabel}</span>
+                        <div className='flex flex-col '>
+                            {getSubAndItem?.map((val,idx)=><div key={val?.id} className={`flex flex-col w-full gap-4 pt-4 pb-2 ${idx==getSubAndItem.length-1?'':'border-b border-neutral-400'}`}>
+                                <div
+                                    className="flex items-center w-full justify-between cursor-pointer"
+                                    onClick={() => val?.children?.length?handleExpanded(val?.id):router.push(`/products?groupcategoryID=${val?.id},`)}
+                                >
+                                    <span className="text-xs text-neutral-900 font-semibold">{val?.value}</span>
+                                    {!!(val?.children?.length)&&<IconComponent
+                                        src={`${
+                                            getExpanded.some(a => a === val?.id)
+                                                ? '/icons/chevron-up.svg'
+                                                : '/icons/chevron-down.svg'
+                                        }`}
+                                    />}
+                                </div>
+                                {getExpanded.some(a => a === val?.id)&&<div
+                                    className="flex flex-col gap-4 h-fit"
+                                >
+                                    {
+                                        val?.children?.map(child=><span className='text-neutral-900 text-xs font-medium hover:text-primary-700 cursor-pointer' key={child?.id} onClick={()=>handleRedirect(val?.id,child?.id)}>{child?.value}</span>)
+                                    }
+                                </div>}
+                            </div>)}
+                        </div>
+                    </div>}
+                    <div className='flex flex-col gap-8 w-full'>
+                        {!isLoading?(
+                            <>
+                            {
+                                products?.length?
+                                    // products?.map(val=>val?.products.length>0&&(
+                                    // <div key={val?.subcategoryID} className='flex flex-col gap-3'>
+                                    //     <div className='flex gap-4 items-baseline'>
+                                    //         <span className='font-bold text-neutral-900 text-sm'>{val?.subcategory}</span>
+                                    //         <span className='text-[#176CF7] font-bold text-xs cursor-pointer' onClick={()=>router.push(`/products?groupcategoryID=${val?.subcategoryID},`)}>{t('LabelfilterProdukLihatSemua')}</span>
+                                    //     </div>
+                                    //     <div className='w-full flex flex-wrap gap-3'>
+                                    //         {
+                                    //             val?.products?.map((prod,i)=><ProductComponent key={i} {...prod} />)
+                                    //         }
+                                    //     </div>
+                                    // </div>))
+                                    // 25. 11 - QC Plan - Web - Ronda Live Mei - LB - LB - 0044
+                                    products?.every(val=>val.products.length===0)?(
+                                        <DataNotFound title={`${t('LabelfilterProdukTidakadaprodukdiKategori')} ${categoryLabel}`} type='data' />
+                                    ):products?.map(val=>val?.products.length>0&&(
+                                        <div key={val?.subcategoryID} className='flex flex-col gap-3'>
+                                            <div className='flex gap-4 items-baseline'>
+                                                <span className='font-bold text-neutral-900 text-sm'>{val?.subcategory}</span>
+                                                <span className='text-[#176CF7] font-bold text-xs cursor-pointer' onClick={()=>router.push(`/products?groupcategoryID=${val?.subcategoryID},`)}>{t('LabelfilterProdukLihatSemua')}</span>
+                                            </div>
+                                            <div className='w-full flex flex-wrap gap-3'>
+                                                {
+                                                    val?.products?.map((prod,i)=><ProductComponent key={i} {...prod} />)
+                                                }
+                                            </div>
+                                        </div>))
+                                // LBM
+                                :(
+                                <div className="py-52">
+                                    <DataNotFound title={`${t('LabelfilterProdukTidakadaprodukdiKategori')} ${categoryLabel}`} type='data' />
+                                </div>
+                                )
+                            }
+                            </>
+                        ):(
+                            <div className="flex gap-[38px]">
+                                <div className="flex flex-col bg-neutral-50 border border-neutral-400 rounded-md p-4 gap-4 w-[264px] h-fit">
+                                    <div className="flex flex-col gap-3">
+                                        <div className="bg-gray-300 animate-pulse rounded-md w-full h-5"/>
+                                        <div className="bg-gray-300 animate-pulse rounded-md w-20 h-5"/>
+                                    </div>
+                                    <div className='flex flex-col '>
+                                        {Array(3).fill('').map((val,idx)=><div key={val?.id} className={`flex flex-col w-full gap-4 pt-4 pb-2 border-b border-neutral-400`}>
+                                            <div
+                                                className="flex w-full cursor-pointer flex-col gap-4"
+                                                onClick={() => val?.children?.length?handleExpanded(val?.id):router.push(`/products?groupcategoryID=${val?.id},`)}
+                                            >
+                                                <span className="bg-gray-300 rounded-md w-[30%] h-3"></span>
+                                                <span className="bg-gray-300 rounded-md w-[60%] h-3"></span>
+                                                <span className="bg-gray-300 rounded-md w-[60%] h-3"></span>
+                                                <span className="bg-gray-300 rounded-md w-[60%] h-3"></span>
+                                            </div>
+                                            
+                                        </div>)}
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-3 w-full">
+                                    {Array(12).fill('').map((rows)=>(
+                                        <ProductComponentSkeleton/>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {/* {!!(products?.length)&&<h1 className='text-[18px] font-bold text-neutral-900 w-full'>{t('LabelfilterProdukRekomendasiProdukyangBanyakDicari')}</h1>}
+                        <div className='flex flex-col gap-4 w-full overflow-x-auto scrollbar-none'>
+                            {products?.length?products?.map(val=><div key={val?.subcategoryID} className='flex flex-col gap-3'>
+                                <div className='flex gap-4 items-baseline'>
+                                    <span className='font-bold text-neutral-900 text-sm'>{val?.subcategory}</span>
+                                    <span className='text-[#176CF7] font-bold text-xs cursor-pointer' onClick={()=>router.push(`/products?groupcategoryID=${val?.subcategoryID},`)}>{t('LabelfilterProdukLihatSemua')}</span>
+                                </div>
+                                <div className='w-full flex flex-wrap gap-3'>
+                                    {
+                                        val?.products?.map((prod,i)=><ProductComponent key={i} {...prod} />)
+                                    }
+                                </div>
+                            </div>)
+                            // LBM
+                            :<DataNotFound title={`${t('LabelfilterProdukTidakadaprodukdiKategori')} ${categoryLabel}`} type='data' />
+                            }
+                        </div> */}
+                    </div>
+                </div>
+            </div>
+            <div className={style.muatPlus+' h-[320px] relative !py-10 !px-[140px] flex !flex-row !justify-between overflow-hidden'}>
+                <Image src={process.env.NEXT_PUBLIC_ASSET_REVERSE+'/img/muatplus-garis-web.png'} width={1688} height={815} alt='plus' className='absolute -bottom-[40px] opacity-5 right-0' />
+                <div className='flex flex-col gap-6'>
+                    <p className='text-neutral-50 text-xl font-medium'>{t('LabelfilterProdukDapatkankeuntunganlebihdenganberlanggananmembershipdi')}</p>
+                    <div className='flex gap-2 item-center'>
+                        <IconComponent src='/icons/muatplu-shield.svg' width={40} height={40} />
+                        <p className='font-bold text-neutral-50 text-[32px]'>{t('LabelfilterProdukmembershipdimuatparts+PLUS')}</p>
+                    </div>
+                    <Button color='primary_secondary' Class='h-8 !border-none'>{t('LabelfilterProdukPelajariSelengkapnya')}</Button>
+                </div>
+                <div className='grid grid-cols-2 gap-[9px]'>
+                    <div className='flex flex-col gap-[9px] rounded-xl p-[14px] bg-neutral-50'>
+                        <Image alt='p' src={'/img/plus1.png'} width={36} height={36} />
+                        <span className='font-bold text-xs text-[#176CF7]'>{t('LabelfilterProdukJaminanProdukOriginal')}</span>
+                    </div>
+                    <div className='flex flex-col gap-[9px] rounded-xl p-[14px] bg-neutral-50'>
+                        <Image alt='p' src={'/img/plus2.png'} width={36} height={36} />
+                        <span className='font-bold text-xs text-[#176CF7]'>{t('LabelfilterProdukDapatMengirimRFQ')}</span>
+                    </div>
+                    <div className='flex flex-col gap-[9px] rounded-xl p-[14px] bg-neutral-50'>
+                        <Image alt='p' src={'/img/plus3.png'} width={36} height={36} />
+                        <span className='font-bold text-xs text-[#176CF7]'>{t('LabelfilterProdukGratisToolsPengaturanStockdiStockist')}</span>
+                    </div>
+                    <div className='flex flex-col gap-[9px] rounded-xl p-[14px] bg-neutral-50'>
+                        <Image alt='p' src={'/img/plus4.png'} width={36} height={36} />
+                        <span className='font-bold text-xs text-[#176CF7]'>{t('LabelfilterProdukVoucherEksklusif')}</span>
+                    </div>                
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default CategoriesWeb;
+  

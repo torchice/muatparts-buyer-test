@@ -1,0 +1,28 @@
+.main {
+  display: flex;
+  padding: 24px 40px 14px;
+  margin: 0px auto;
+  max-width: 1280px;
+}
+
+.notFoundContainer {
+  height: calc(100vh - 90px);
+}
+
+@media (max-width: 500px) {
+  .main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+    margin: 0;
+    max-width: none;
+    background-color: rgba(241, 241, 241, 1);
+  }
+}
+
+.icon_white{
+  path{
+      stroke: var(--neutral-50);
+  }
+}

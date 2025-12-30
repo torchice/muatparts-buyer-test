@@ -1,0 +1,36 @@
+'use client'
+import { createContext, useContext, useEffect, useState } from "react";
+import axios from "axios";
+import { useSearchParams } from "next/navigation";
+
+const LanguageContext = createContext();
+
+export const LanguageProvider = ({ children }) => {
+  const [language, setLanguage] = useState(useSearchParams().get("lang") || 'id');
+  const [translations, setTranslations] = useState({});
+
+  useEffect(() => {
+    async function fetchTranslations() {
+      try {
+        let url = `${process.env.NEXT_PUBLIC_S3_URL}/content-general/locales/${process.env.NEXT_PUBLIC_ENVIRONMENT}/${language}/common.json`;
+        const res = await axios(url);
+        setTranslations(res.data);
+      } catch (error) {
+        console.error("Error fetching translations:", error);
+      }
+    }
+    fetchTranslations();
+  }, [language]);
+
+  const t = (key) => {
+    return translations[key] || key;
+  }
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t,translations }}>
+      {Object.keys(translations).length !== 0 && children}
+    </LanguageContext.Provider>
+  );
+};
+
+export const useLanguage = () => useContext(LanguageContext);

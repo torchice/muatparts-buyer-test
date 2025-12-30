@@ -1,0 +1,18 @@
+import { useState } from "react";
+import { GuideAccordion } from "./GuideAccordion";
+import { resPaymentMethods } from "./paymentData";
+
+export default function PaymentGuide({ onOptionSelect }) {
+  const [paymentData, setPaymentData] = useState(resPaymentMethods.Data);
+
+  return (
+    <div className="flex flex-col leading-tight text-black w-full h-fit">
+      <div className="self-start text-base font-bold">Cara Pembayaran</div>
+      <div className="flex overflow-auto flex-col mt-4 w-full text-xs">
+        {paymentData.map((item) => (
+          <GuideAccordion item={item} onOptionSelect={onOptionSelect} />
+        ))}
+      </div>
+    </div>
+  );
+}

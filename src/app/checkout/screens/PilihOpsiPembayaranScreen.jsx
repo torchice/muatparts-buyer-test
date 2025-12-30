@@ -1,0 +1,56 @@
+import ButtonBottomMobile from '@/components/ButtonBottomMobile/ButtonBottomMobile'
+import IconComponent from '@/components/IconComponent/IconComponent'
+import RadioButton from '@/components/Radio/RadioButton'
+import Image from 'next/image'
+import React from 'react'
+import { useState } from 'react'
+
+function PilihOpsiPembayaranScreen({paymentData,onSave}) {
+    const [selected,setSelected]=useState(null)
+    const [expanded,setExpanded]= useState([])
+    function handleExpand(params) {
+        if(expanded.some(ep=>ep===params)) setExpanded(expanded?.filter(q=>q!==params))
+        else setExpanded(a=>[...a,params])
+    }
+    
+  return (
+    <>
+        <ul className="list-none flex flex-col h-screen pb-28 gap-3 p-4">
+            {
+                paymentData?.map((val,i)=><li key={i}>
+                    <div className="flex flex-col gap-3">
+                        <div className='flex w-full justify-between items-center' onClick={()=>handleExpand(val?.channel)}>
+                            <div className='flex gap-2 items-center'>
+                                <span><img src={val?.icon} width={24} height={24} alt={'ss'}/></span>
+                                <span className="bold-sm">{val?.category}</span>
+                            </div>
+                            <span><IconComponent src={expanded?.some(p=>p===val?.channel)?'/icons/chevron-up.svg':'/icons/chevron-down.svg'} /></span>
+                        </div>
+                        {
+                            expanded?.some(p=>p===val?.channel)&&
+                            <div style={{height:`${val?.method?.length*32}px`}} className={`transition-all delay-75 flex flex-col gap-5`}>
+                                {
+                                    val?.methods?.map(meth=>{
+                                        return(
+                                            <div key={meth?.id} className={`ml-8 flex w-[calc(100% - 32px)] justify-between items-center border-b border-neutral-400 pb-3 `}>
+                                                <div className='flex gap-2 items-center'>
+                                                    <span><img src={meth?.icon} width={24} height={24} alt={'ss'}/></span>
+                                                    <span className="bold-sm">{meth?.name}</span>
+                                                </div>
+                                                <RadioButton value={meth?.id} checked={selected?.method?.id===meth?.id} onClick={()=>setSelected({method:meth,channel:val?.channel,category:val?.category})} label='' />
+                                            </div>
+                                        )
+                                    })
+                                }
+                            </div>
+                        }
+                    </div>
+                </li>)
+            }
+        </ul>
+        <ButtonBottomMobile isSingleButton onClickSingleButton={()=>onSave(selected)} textSingleButton={'Simpan'} />
+    </>
+  )
+}
+
+export default PilihOpsiPembayaranScreen

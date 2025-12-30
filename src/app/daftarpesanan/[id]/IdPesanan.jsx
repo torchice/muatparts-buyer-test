@@ -1,0 +1,53 @@
+"use client";
+import { viewport } from "@/store/viewport";
+import React, { useState } from "react";
+import IdPesananResponsive from "./IdPesananResponsive";
+import IdPesananWeb from "./IdPesananWeb";
+import SWRHandler from "@/services/useSWRHook";
+import { useSearchParams } from "next/navigation";
+
+function IdPesanan({ id }) {
+  const params = useSearchParams();
+
+  const page = params.get("page");
+  const transactionID = params.get("transactionID");
+
+  const DETAIL_PESANAN_ENDPOINT = `v1/muatparts/buyer/orders/detail?orderID=${id}${
+    page ? `&page=${page}` : `&transactionID=${transactionID}`
+  }`;
+
+  const [state, setState] = useState();
+  const { useSWRHook, useSWRMutateHook } = SWRHandler();
+  const { data: reject_options } = useSWRHook(
+    "v1/muatparts/transaction/cancel_options"
+  );
+
+  const {
+    data: resIdPesanan,
+    isLoading: loadingIdPesanan,
+    mutate: mutateIdPesanan,
+  } = useSWRHook(DETAIL_PESANAN_ENDPOINT);
+  const { isMobile } = viewport();
+  if (typeof isMobile !== "boolean") return <></>; //buat skeleton
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0563
+  if (isMobile)
+    return (
+      <IdPesananResponsive
+        mutateIdPesanan={mutateIdPesanan}
+        id={id}
+        data={resIdPesanan?.Data}
+        reject_options={reject_options?.Data ?? []}
+      />
+    );
+  return (
+    <IdPesananWeb
+      id={id}
+      data={resIdPesanan?.Data ?? []}
+      orderStatus={resIdPesanan?.Data.statusInfo.statusInfoBuyer.status}
+      mutateIdPesanan={mutateIdPesanan}
+      loadingIdPesanan={loadingIdPesanan}
+    />
+  );
+}
+
+export default IdPesanan;

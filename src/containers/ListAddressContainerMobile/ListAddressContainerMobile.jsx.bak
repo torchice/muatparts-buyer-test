@@ -1,0 +1,90 @@
+
+'use client';
+import ButtonBottomMobile from '@/components/ButtonBottomMobile/ButtonBottomMobile';
+import style from './ListAddressContainerMobile.module.scss'
+import Button from '@/components/Button/Button';
+import { useEffect, useState } from 'react';
+import DataNotFound from '@/components/DataNotFound/DataNotFound';
+import SWRHandler from '@/services/useSWRHook';
+import Input from '@/components/Input/Input';
+import AddressCardMobile from '../AddressCardMobile/AddressCardMobile';
+import { sortMainAddressOnTop } from '@/libs/services';
+import { addManagementLocationZustand, userLocationZustan } from '@/store/manageLocation/managementLocationZustand';
+import { useHeader } from '@/common/ResponsiveContext';
+import { useLanguage } from '@/context/LanguageContext';
+// 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer LB - 0160 
+import IconComponent from '@/components/IconComponent/IconComponent';
+function ListAddressContainerMobile({address,onSave,onAddAddress,hideSearch=false,onChange,onChoose,preventDefaultSelected=false}) {
+    const { t } = useLanguage()
+    const {useSWRHook}=SWRHandler()
+    const {setAppBar} = useHeader()
+    const { data: userLocation, isLoading } = useSWRHook(
+        "v1/muatparts/profile/location"
+      )
+    const [selectedAddress,setSelectedAddress]=useState(null)
+    const [search,setSearch]=useState('')
+    const {locations,setSelectedLocation,selectedLocation,setLocation,selectedLocations} =userLocationZustan()
+    const {setAllState,clearState}=addManagementLocationZustand()
+    function handleSave() {
+        if(typeof onSave==='function') onSave?.(locations?.find(val=>val?.ID==selectedAddress?.ID))
+        else{
+            setSelectedLocation(locations?.find(val=>val?.ID==selectedAddress?.ID))
+            setAppBar({
+                defaultType:""
+            })
+        }
+    }
+    function handleOnChoose(ID) {
+        onChoose?.(locations?.find(a=>a.ID==ID))
+        setSelectedAddress(locations?.find(a=>a.ID==ID))
+    }
+    function handleOnChange(state) {
+        setAllState(state)
+        onChange?.(state)
+    }
+    function handleOnAddAddress(){
+        clearState()
+        onAddAddress?.()
+    }
+    const getSelectedLocation= selectedAddress?selectedAddress:selectedLocation
+    useEffect(()=>{
+        if(address?.length){
+            setLocation(address)
+        }else{
+            if (userLocation?.Data?.length) setLocation(userLocation?.Data)
+        }
+    },[address,userLocation])
+    
+    return (
+        <div className={style.main+` flex flex-col pb-16 h-auto w-full bg-neutral-200 gap-2 ${address?.length?'justify-center items-center':''}`}>
+            {
+                !Array.isArray(locations)&&!locations?.length?
+                <div className='flex flex-col gap-3 w-full h-full justify-center items-center'>
+                    <DataNotFound type='data' title={t('LabelnavbarResponsiveKamubelumpunyaalamat')}/>
+                    <span className='font-medium text-neutral-600 text-center text-xs'>{t('LabelnavbarResponsiveYuktambahkanalamatmusekarang!')}</span>
+                </div>
+                :<>
+                {/* 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - LB - 0127 */}
+                    {!hideSearch&&<div className='bg-neutral-50 w-full pb-4 containerMobile'>
+                    <Input icon={{left:<IconComponent loader={false} src={'/icons/search.svg'} height={16} width={16}/>}} value={search} changeEvent={a=>setSearch(a.target.value)} placeholder={t('LabelnavbarResponsiveCarinamaalamatyangdisimpan')} classname={'h-8'} />
+                    </div>}
+                    <div className='pb-[70px] flex flex-col gap-2'>
+                        {
+                            locations?.length?
+                            locations?.filter(val=> val?.Name?.toLowerCase()?.includes(search?.toLowerCase()))?.map((val,i)=><AddressCardMobile key={i} ID={val?.ID} isMain={val?.IsMainAddress} address={val?.Address} detailAddress={val?.AddressDetail} name={val?.Name} nomor={val?.PicNoTelp} pic={val?.PicName} primary={(selectedLocations?.length&&preventDefaultSelected)?selectedLocations?.some(a=>a?.ID===val?.ID):!preventDefaultSelected?getSelectedLocation?.ID===val?.ID:false} value={val} mutate={()=>mutate('muatparts/profile/location', null, false)} onChange={handleOnChange} onChoose={handleOnChoose} />)
+                            :''
+                        }
+                    </div>
+                </>
+            }
+            {
+                locations?.length?
+                <ButtonBottomMobile textLeft={t('LabelnavbarResponsiveTambahAlamat')} textRight={t('LabelnavbarResponsiveSimpan')} onClickLeft={onAddAddress} onClickRight={handleSave} />
+                :<ButtonBottomMobile classname={'px-4 py-3'}><Button onClick={onAddAddress} Class='w-full max-w-none'>{t('LabelnavbarResponsiveTambahAlamat')}</Button></ButtonBottomMobile>
+            }
+        </div>
+    );
+}
+
+export default ListAddressContainerMobile;
+  

@@ -1,0 +1,1191 @@
+import { useHeader } from "@/common/ResponsiveContext";
+import React, { Fragment, useEffect, useState } from "react";
+import style from "./Checkout.module.scss";
+import IconComponent from "@/components/IconComponent/IconComponent";
+import GlobalLoading from "@/components/GlobalLoading/GlobalLoading";
+import DataNotFound from "@/components/DataNotFound/DataNotFound";
+import ImageComponent from "@/components/ImageComponent/ImageComponent";
+import CardOrderProduct from "@/components/CardOrderProduct/CardOrderProduct";
+import CardOrderDetailProductMobile from "@/components/CardOrderDetailProductMobile/CardOrderDetailProductMobile";
+import { numberFormatMoney } from "@/libs/NumberFormat";
+import PilihOpsiPengirimanScreen from "./screens/PilihOpsiPengirimanScreen";
+import Checkbox from "@/components/Checkbox/Checkbox";
+import ButtonBottomMobile from "@/components/ButtonBottomMobile/ButtonBottomMobile";
+import Button from "@/components/Button/Button";
+import { PaymentAccordion } from "@/components/PaymentOption/PaymentAccordion";
+import PilihOpsiPembayaranScreen from "./screens/PilihOpsiPembayaranScreen";
+import ModalComponent from "@/components/Modals/ModalComponent";
+import TextArea from "@/components/TextArea/TextArea";
+import { formatDate, getAdjustedDate } from "@/libs/DateFormat";
+import ListAddressContainerMobile from "@/containers/ListAddressContainerMobile/ListAddressContainerMobile";
+import VoucherCheckout from "@/components/VoucherMobile/VoucherCheckout";
+import toast from "@/store/toast";
+import useVoucherStore from "@/store/voucher";
+import { getVoucherValue } from "@/libs/voucher";
+import ToastApp from "@/components/ToastApp/ToastApp";
+import {
+  addManagementLocationZustand,
+  userLocationZustan,
+} from "@/store/manageLocation/managementLocationZustand";
+import DropshipForm from "@/containers/RingkasanPembayaran/DropshipForm";
+import SWRHandler from "@/services/useSWRHook";
+import useVoucherMuatpartsStore from "@/store/useVoucherMuatpartsStore";
+import UsedVoucherList from "@/containers/MuatpartsVoucher/UsedVoucherList";
+import {
+  extractVoucherIDs,
+  getVoucherValues as muatpartsVoucherValue,
+} from "@/utils/voucher";
+
+const preventif_action = Object.freeze({
+  promo: Object.freeze({
+    title: "Promo Tidak Tersedia",
+    desc: "Maaf, promo yang kamu pilih sudah tidak tersedia. Harga akan kembali ke harga terbaru. Silahkan periksa kembali pesanan kamu.",
+  }),
+  voucher: Object.freeze({
+    title: "Voucher Tidak Tersedia",
+    desc: "Maaf, voucher yang kamu pilih tidak tersedia atau sudah tidak berlaku. Silakan periksa kembali pesanan kamu.",
+  }),
+  closeStore: Object.freeze({
+    title: "Toko Sedang Tutup",
+    desc: "Maaf, toko saat ini sedang tutup sehingga pesanan tidak dapat diproses. Silakan coba kembali saat toko sudah buka.",
+  }),
+  dataChange: Object.freeze({
+    title: "Terdapat Perubahan Data Produk",
+    desc: "Maaf, terdapat perubahan pada data produk. Silakan periksa kembali pesanan kamu.",
+  }),
+});
+
+function CheckoutResponsive({
+  resDetailCheckout,
+  dataShippingCost,
+  supportingDataCheckoutDetail,
+  paymentData,
+  onClickPay,
+  errorCheckout,
+  isLoadingCheckout,
+  resetBuyNow,
+  triggerOrderPayment,
+  validateMake,
+}) {
+  const {
+    appBarType, //pilih salah satu : 'header_title_secondary' || 'header_search_secondary' || 'default_search_navbar_mobile' || 'header_search' || 'header_title'
+    appBar, // muncul ini : {onBack:null,title:'',showBackButton:true,appBarType:'',appBar:null,header:null}
+    renderAppBarMobile, // untuk render komponen header mobile dengan memasukkanya ke useEffect atau by trigger function / closer
+    setAppBar, // tambahkan payload seperti ini setAppBar({onBack:()=>setScreen('namaScreen'),title:'Title header',appBarType:'type'})
+    handleBack, // dipanggil di dalam button di luar header, guna untuk kembali ke screen sebelumnya
+    clearScreen, // reset appBar
+    setScreen, // set screen
+    screen, // get screen,
+    search, // {placeholder:'muatparts',value:'',type:'text'}
+    setSearch, // tambahkan payload seperti ini {placeholder:'Pencarian',value:'',type:'text'}
+  } = useHeader();
+
+  const [getModal, setModal] = useState("");
+  const [getSelectedSeller, setSelectedSeller] = useState("");
+  const [getToast, setToast] = useState({ id: "", text: "" });
+  const [getModalText, setModalText] = useState({ title: "", desc: "" });
+  const [opsiPengiriman, setOpsiPengiriman] = useState([]);
+  const [getNoteId, setNoteId] = useState({ id: "", value: "" });
+  const [getChangedLocation, setChangedLocation] = useState([]);
+  const [getNote, setNote] = useState([]);
+  const [getExpedition, setExpedition] = useState([]);
+  const [withInsurance, setWithInsurance] = useState([]);
+  const [paymentOption, setPaymentOption] = useState([]);
+  const [getSelectedVoucher, setSelectedVoucher] = useState([]);
+
+  const [getValidation, setValidation] = useState([]);
+
+  const { selectedLocation } = userLocationZustan();
+  const { setShowBottomsheet } = toast();
+  const { usedVoucher, setUsedVoucher } = useVoucherStore();
+  const { setSelectedVouchers, submittedVouchers } = useVoucherMuatpartsStore();
+
+  const { useSWRMutateHook } = SWRHandler();
+  const { trigger: triggerGetShippingCost } = useSWRMutateHook(
+    process.env.NEXT_PUBLIC_GLOBAL_API + "v1/muatparts/order/shipping_cost"
+  );
+  // dropship
+  const [isDropship, setIsDropship] = useState(false);
+  const [dropshipValues, setDropshipValues] = useState({
+    name: "",
+    phone: "",
+  });
+  const [dropshipErrors, setDropshipErrors] = useState({
+    name: "",
+    phone: "",
+  });
+  const [getProducts, setProducts] = useState([]);
+  const checkDropshipValues = (e) => {
+    setDropshipValues(e);
+  };
+  // dropship
+  useEffect(() => {
+    if (resDetailCheckout?.length) {
+      let tmpopsipengiriman = [];
+      resDetailCheckout?.map((val, i) => {
+        setChangedLocation((prev) => [
+          ...prev,
+          { sellerID: val?.seller?.id + i, ...val?.shippingAddress },
+        ]);
+        const payload = {
+          sellerID: val?.seller?.id,
+          locationID: val?.shippingAddress?.ID,
+          products: val?.products?.map((product) => ({
+            id: product.id,
+            variantID: product.variant?.id || "",
+            salesType: product.salesType || "Satuan/Ecer",
+            qty: product.qty,
+          })),
+        };
+        triggerGetShippingCost(payload).then((a) => {
+          // let tmp = opsiPengiriman?.filter(a=>a?.sellerID!==(val?.seller?.id+id))
+          // let newdata = [...tmp,{sellerID:val?.seller?.id+i,id:i,...a?.data?.Data}]
+          tmpopsipengiriman.push({
+            sellerID: val?.seller?.id + i,
+            id: i,
+            ...a?.data?.Data,
+          });
+          // setChangedLocation(prev=>[...prev,{sellerID:val?.seller?.id,...val?.shippingAddress}])
+        });
+      });
+      setOpsiPengiriman(tmpopsipengiriman);
+    }
+  }, [resDetailCheckout]);
+  useEffect(() => {
+    if (resDetailCheckout?.length) {
+      setProducts(resDetailCheckout);
+
+      // Handle vouchers for each seller
+      resDetailCheckout.forEach((item, index) => {
+        let tmp = {
+          id: index,
+          sellerID: item.seller.id,
+          voucherProduct: item.usedVouchers.voucherProduct,
+          voucherOngkir: item.usedVouchers.voucherOngkir,
+        };
+
+        setSelectedVoucher((a) => [...a, tmp]);
+      });
+    }
+  }, [resDetailCheckout]);
+
+  const totalProduct = getProducts.reduce(
+    (sum, order) => sum + order.totalAmount,
+    0
+  );
+  const totalProductLength = getProducts.reduce(
+    (count, order) => count + order.products.length,
+    0
+  );
+  const totalShippingCost = getExpedition.reduce(
+    (sum, item) => sum + item?.expedisi?.buyerCost,
+    0
+  );
+
+  const totalInsuranceCost = withInsurance.reduce(
+    (sum, item) => sum + item?.expedisi?.originalInsurance,
+    0
+  );
+  const totalBill = (data) => data?.reduce((a, b) => a + b, 0);
+  function handleSelectedVoucher({
+    id,
+    sellerID,
+    voucherProduct,
+    voucherOngkir,
+  }) {
+    let tmp = {
+      id: getSelectedSeller?.id,
+      sellerID: getSelectedSeller?.sellerID,
+      voucherProduct,
+      voucherOngkir,
+    };
+
+    if (getSelectedVoucher?.some((a) => a?.id === getSelectedSeller?.id)) {
+      let oldData = getSelectedVoucher?.filter((a) => a?.sellerID !== sellerID);
+      setSelectedVoucher([...oldData, tmp]);
+    } else setSelectedVoucher((a) => [...a, tmp]);
+  }
+  function generateDestinationAddress(val) {
+    if (!Object.keys(val).length) return null;
+    return {
+      id: val?.ID,
+      addressName: val?.Name,
+      contactPerson: val?.PicName,
+      phone: val?.PicNoTelp,
+      address: val?.Address,
+      detailedAddress: val?.AddressDetail,
+      destinationLat: val?.Latitude,
+      destinationLng: val?.Longitude,
+      // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0043
+      isDropship: isDropship,
+      dropshipName: dropshipValues.name || null,
+      dropshipPhone: dropshipValues.phone || null,
+    };
+  }
+  function generateItems(params) {
+    return params?.map((val, index, products) => ({
+      productName: val?.productName,
+      productID: val?.id,
+      promoID: val?.promoID,
+      variantID: val?.variant?.id,
+      quantity: val?.qty,
+      unitPrice: val?.priceAfterDiscount,
+      discountPercentage: val?.discount,
+      totalPrice: val?.subtotal,
+      note: getNote?.length
+        ? getNote?.find((a) => a?.id === val?.id)?.value
+        : "",
+      shippingcostBy: val?.shippingcostBy,
+      lenght: products?.length,
+      height: 1,
+      width: 1,
+      weight: 1,
+    }));
+  }
+  function generateShipping(params) {
+    if (!Object.keys(params).length) return null;
+    const { expedisi: val, groupname, id, tipe } = params;
+    return {
+      shippingType: tipe,
+      shippingItemID: val?.id !== "expedition" ? null : "expedition",
+      method: val?.courierName,
+      serviceType: val?.courierName, //here
+      estimatedDate:
+        formatDate(
+          getAdjustedDate(val?.minEstimatedDay),
+          ["day", "month"],
+          false
+        ) +
+        " - " +
+        formatDate(
+          getAdjustedDate(val?.maxEstimatedDay),
+          ["day", "month"],
+          false
+        ),
+      insurance: val?.mustUseInsurance,
+      insuranceCost: val?.originalInsurance,
+      shippingCost: val?.buyerCost,
+      note: "",
+      originAreaId: val?.originAreaId,
+      destinationAreaId: val?.destinationAreaId,
+    };
+  }
+
+  const mappedVoucherIDs = extractVoucherIDs(submittedVouchers);
+
+  function generatePaymnet(params) {
+    if (!Object.keys(params).length) return null;
+    const { method: val, channel, category } = params;
+    return {
+      paymentMethodID: val?.id,
+      channel: channel,
+      method: val?.name,
+      total: totalBill(),
+      totalAfterDiscount: totalBill(),
+      applicationFee: supportingDataCheckoutDetail?.appFee,
+      vouchers: mappedVoucherIDs,
+    };
+  }
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0259
+  function generateOngkirAll(ongkir) {
+    const ongkir_total = getSelectedVoucher
+      .filter((a) => a?.voucherOngkir)
+      ?.map(({ voucherOngkir, ...rest }) => voucherOngkir)
+      ?.reduce(
+        (sum, item) =>
+          sum + (Number(+item?.discountValue) + Number(+item?.discountValue)),
+        0
+      );
+    const total = ongkir - ongkir_total;
+    if (total < 0) return 0;
+    else return total;
+  }
+
+  function generateVoucher() {
+    // let total_bill = totalBill([
+    //   totalProduct,
+    //   totalShippingCost,
+    //   totalInsuranceCost,
+    //   supportingDataCheckoutDetail?.appFee
+    //   ])
+    const voucher_total = getSelectedVoucher
+      .filter((a) => a?.voucherProduct)
+      ?.map(({ voucherProduct, ...rest }) => voucherProduct)
+      ?.reduce(
+        (sum, item) =>
+          item.discountType === "Nominal"
+            ? sum + +item?.discountValue + +item?.discountValue
+            : sum +
+              Math.min(
+                (Number(+item?.discountValue) / 100) * totalProduct,
+                parseFloat(item.discountMax)
+              ),
+        0
+      );
+    const total = voucher_total;
+    return total;
+  }
+  function generateEachVoucher(type, value, discountmax, total) {
+    const voucher_total =
+      type === "Nominal"
+        ? Number(+value)
+        : Math.min((Number(+value) / 100) * total, parseFloat(discountmax));
+    return voucher_total > total ? total : voucher_total;
+  }
+
+  const totalSellerPurchaseVouchers = getSelectedVoucher.reduce(
+    (total, transaction) => {
+      let voucherValue = 0;
+      if (transaction?.voucherProduct) {
+        voucherValue += getVoucherValue(
+          transaction.voucherProduct,
+          totalProduct
+        );
+      }
+      return total + voucherValue;
+    },
+    0
+  );
+
+  const totalPayment = Math.max(0, totalProduct - totalSellerPurchaseVouchers);
+
+  const totalMuatpartsPurchaseVouchers =
+    muatpartsVoucherValue(submittedVouchers, totalPayment).purchase || 0;
+
+  const totalMuatpartsShippingVouchers =
+    muatpartsVoucherValue(submittedVouchers, totalShippingCost).shipping || 0;
+
+  const finalPayment = totalPayment - totalMuatpartsPurchaseVouchers;
+
+  // console.log("penting", {
+  //   "1 total awal": totalProduct,
+  //   "2 total voucher penjual": totalSellerPurchaseVouchers,
+  //   "3 total setelah voucher penjual": totalPayment,
+  //   "4 total voucher muatparts": totalMuatpartsPurchaseVouchers,
+  //   "5 total akhir": finalPayment,
+
+  //   "a total ongkir muatparts": totalShippingCost,
+  //   "b total voucher ongkir muatparts": totalMuatpartsShippingVouchers,
+  // });
+
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0259
+  function generateVoucherOngkir() {
+    // let total_bill = totalBill([
+    //   totalProduct,
+    //   totalShippingCost,
+    //   totalInsuranceCost,
+    //   supportingDataCheckoutDetail?.appFee
+    //   ])
+    const voucher_total = getSelectedVoucher
+      .filter((a) => a?.voucherOngkir)
+      ?.map(({ voucherOngkir, ...rest }) => voucherOngkir)
+      ?.reduce(
+        (sum, item) =>
+          item.discountType === "Nominal"
+            ? sum + Number(+item?.discountValue)
+            : sum +
+              Math.min(
+                (Number(+item?.discountValue) / 100) * totalProduct,
+                parseFloat(item.discountMax)
+              ),
+        0
+      );
+    const total = voucher_total;
+    return total;
+  }
+  const getVoucherCount = ({ voucherProduct, voucherOngkir }) =>
+    (voucherProduct ? 1 : 0) + (voucherOngkir ? 1 : 0);
+  function onCloseModalNotes() {
+    setModal("");
+    setNoteId((a) => ({ ...a, value: "" }));
+  }
+  function handleSaveNote() {
+    let tmp = getNote;
+    if (tmp.some((a) => a?.id === getNoteId?.id)) {
+      let newTmp = tmp.find((a) => a?.id === getNoteId?.id);
+      newTmp["value"] = getNoteId?.value;
+      let newData = getNote.filter((s) => s?.id !== getNoteId?.id);
+      setNote([...newData, newTmp]);
+    } else setNote((a) => [...a, getNoteId]);
+    setNoteId((a) => ({ ...a, value: "" }));
+    setModal("");
+  }
+  function handleCheckInsurance(value) {
+    if (withInsurance.some((s) => s?.id == value?.id)) {
+      let tmpwithins = withInsurance.filter((s) => s?.id != value?.id);
+      setWithInsurance(tmpwithins);
+    } else {
+      setWithInsurance((s) => [...s, value]);
+    }
+  }
+  function handlePay() {
+    if (!getExpedition?.length || getExpedition.length !== getProducts.length) {
+      getProducts.map((_, index) => {
+        if (
+          getExpedition?.some((a) => a?.id !== index) ||
+          !getExpedition.length
+        )
+          setValidation((prev) => [
+            ...prev,
+            {
+              type: "expedition",
+              msg: "Opsi pengiriman wajib diisi",
+              id: index,
+            },
+          ]);
+      });
+      return document
+        .getElementById("opsi-pengiriman")
+        .scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+
+    if (!paymentOption?.channel) {
+      return setToast({
+        id: "payment-option",
+        text: "Metode Pembayaran wajib dipilih",
+      });
+    }
+
+    if (isDropship) {
+      const errors = {
+        name: "",
+        phone: "",
+      };
+
+      // Validate dropship fields
+      if (!dropshipValues.name || dropshipValues.name.trim() === "") {
+        errors.name = "Nama Pengirim wajib diisi";
+      }
+
+      if (!dropshipValues.phone || dropshipValues.phone.trim() === "") {
+        errors.phone = "Nomor Telepon wajib diisi";
+      }
+
+      // Set the errors
+      setDropshipErrors(errors);
+
+      // Check if there are any errors
+      if (errors.name || errors.phone) {
+        return document
+          .getElementById("dropship-form")
+          .scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }
+    triggerOrderPayment({
+      orders: getProducts?.map((val, index) => ({
+        destinationAddress: generateDestinationAddress(val?.shippingAddress),
+        sellerID: val?.seller?.id,
+        originLat: val?.shippingAddress?.Latitude,
+        originLng: val?.shippingAddress?.Longitude,
+        storeName: val?.seller?.storeName,
+        shipFrom: val?.seller?.cityName,
+        items: generateItems(val?.products),
+        shipping: generateShipping(getExpedition?.find((a) => a?.id == index)),
+        vouchers: getSelectedVoucher?.some((a, i) => i === index)
+          ? getSelectedVoucher
+              .filter((a, i) => i === index)
+              ?.flatMap((v) => [
+                v?.voucherOngkir?.uuid && { voucherID: v?.voucherOngkir?.uuid },
+                v?.voucherProduct?.uuid && {
+                  voucherID: v?.voucherProduct?.uuid,
+                },
+              ])
+              .filter(Boolean)
+          : [],
+        subTotal: val?.totalAmount,
+      })),
+      payment: generatePaymnet(paymentOption),
+      info: { chartID: null },
+    }).then(() => resetBuyNow());
+  }
+  useEffect(() => {
+    if (validateMake?.desc) {
+      setModalText(validateMake);
+      setModal("preventif_modal");
+    }
+  }, [validateMake]);
+
+  useEffect(() => {
+    if (supportingDataCheckoutDetail?.checkPromo) {
+      setModalText({
+        ...getModalText,
+        desc: supportingDataCheckoutDetail.checkPromo,
+      });
+      setModal("preventif_modal");
+    }
+  }, [supportingDataCheckoutDetail]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (screen === "") {
+      setAppBar({
+        title: "Detail Pesanan",
+        appBarType: "header_title",
+      });
+    }
+    if (screen === "pilih_opsi_pengiriman") {
+      setAppBar({
+        title: "Pilih Opsi Pengiriman",
+        appBarType: "header_title",
+        onBack: () => setScreen(""),
+      });
+    }
+    if (screen === "pilih_opsi_pembayaran") {
+      setAppBar({
+        title: "Pilih Opsi Pembayaran",
+        appBarType: "header_title",
+        onBack: () => setScreen(""),
+      });
+    }
+    if (screen === "list_location") {
+      setAppBar({
+        title: "Pilih Alamat Tujuan",
+        appBarType: "header_title",
+        onBack: () => setScreen(""),
+      });
+    }
+  }, [screen]);
+  if (screen === "pilih_opsi_pembayaran")
+    return (
+      <PilihOpsiPembayaranScreen
+        paymentData={paymentData}
+        onSave={(a) => {
+          setPaymentOption(a);
+          setScreen("");
+        }}
+      />
+    );
+
+  if (screen === "pilih_opsi_pengiriman")
+    return (
+      <PilihOpsiPengirimanScreen
+        {...opsiPengiriman?.find(
+          (a) => a?.sellerID === getSelectedSeller?.sellerID
+        )?.shippingCost}
+        sellerID={
+          opsiPengiriman?.find(
+            (a) => a?.sellerID === getSelectedSeller?.sellerID
+          )?.sellerID
+        }
+        id={
+          opsiPengiriman?.find(
+            (a) => a?.sellerID === getSelectedSeller?.sellerID
+          )?.id
+        }
+        onChooseExpedition={(a) => {
+          if (getExpedition.some((s) => s?.id == a?.id)) {
+            let tmp = getExpedition.filter((s) => s?.id != a?.id);
+            let tmpwithins = withInsurance.filter((s) => s?.id != a?.id);
+            setExpedition([...tmp, a]);
+            setWithInsurance([...tmpwithins, a]);
+            setValidation(
+              getValidation?.filter((a) => a.id !== getSelectedSeller?.id)
+            );
+          } else {
+            setExpedition((s) => [...s, a]);
+            a?.expedisi?.mustUseInsurance
+              ? setWithInsurance((s) => [...s, a])
+              : "";
+            setValidation(
+              getValidation?.filter((a) => a.id !== getSelectedSeller?.id)
+            );
+          }
+          setScreen("");
+        }}
+      />
+    );
+
+  if (screen === "list_location")
+    return (
+      <ListAddressContainerMobile
+        preventDefaultSelected
+        onSave={(loc) => {
+          let tmp = getChangedLocation?.filter(
+            (a) => a?.sellerID !== getSelectedSeller?.sellerID
+          );
+          let newdata = { ...loc, sellerID: getSelectedSeller?.sellerID };
+          setChangedLocation([...tmp, newdata]);
+          const payload = {
+            sellerID: getSelectedSeller?.originSeller,
+            locationID: loc?.ID,
+            products: getProducts
+              ?.find((a) => a?.seller?.id === getSelectedSeller?.originSeller)
+              ?.products?.map((product) => ({
+                id: product.id,
+                variantID: product.variant?.id || "",
+                salesType: product.salesType || "Satuan/Ecer",
+                qty: product.qty,
+              })),
+          };
+          triggerGetShippingCost(payload).then((a) => {
+            let tmp = opsiPengiriman?.filter(
+              (a) => a?.sellerID !== getSelectedSeller?.sellerID
+            );
+            let newdata = [
+              ...tmp,
+              {
+                sellerID: getSelectedSeller?.sellerID,
+                id: getSelectedSeller?.id,
+                ...a?.data?.Data,
+              },
+            ];
+            setOpsiPengiriman(newdata);
+          });
+          setScreen("");
+          // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0490
+          setExpedition([]);
+        }}
+        onChange={() => {
+          setAppBar({
+            defaultType: "default_add_location_navbar_mobile",
+            title: "Detail Alamat",
+            appBarType: "header_title",
+            onBack: () => {
+              setAppBar({
+                defaultType: "default_location_navbar_mobile",
+                title: "Pilih Alamat Tujuan",
+                appBarType: "header_title",
+              });
+            },
+          });
+        }}
+        onAddAddress={() => {
+          addManagementLocationZustand.getState()?.clearState();
+          setAppBar({
+            defaultType: "default_add_location_navbar_mobile",
+            title: "Detail Alamat",
+            appBarType: "header_title",
+            onBack: () => {
+              setAppBar({
+                defaultType: "default_location_navbar_mobile",
+                title: "Pilih Alamat Tujuan",
+                appBarType: "header_title",
+              });
+            },
+          });
+        }}
+      />
+    );
+
+  // main screen
+  return (
+    <div className={`bg-neutral-200 h-screen`}>
+      <ToastApp
+        bottom={"40px"}
+        classname={"!z-50"}
+        timer={3000}
+        isFixed
+        show={getToast.id}
+        onClose={() => setToast({ id: "", text: "" })}
+        setShow={() => setToast({ id: "", text: "" })}
+        status="error"
+        text={getToast.text}
+      />
+      {isLoadingCheckout && <GlobalLoading />}
+      {errorCheckout && (
+        <DataNotFound
+          type="data"
+          title="Tidak Ditemukan Layanan Apapun"
+          classname={"mt-20"}
+        />
+      )}
+      {/* 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer - LB - 0147 */}
+      <ModalComponent
+        hideHeader
+        isOpen={getModal === "add_note"}
+        setClose={onCloseModalNotes}
+        full
+        type="BottomSheet"
+        title={
+          getNote?.find((a) => a?.id === getNoteId.id)?.value
+            ? "Ubah Catatan"
+            : "Tambah Catatan"
+        }
+      >
+        <div className="flex flex-col gap-4 py-6 px-4">
+          <TextArea
+            placeholder="Tambahakan Catatan"
+            hasCharCount
+            maxLength={250}
+            value={getNoteId.value}
+            changeEvent={(e) => {
+              if (e.target.value > 250) return;
+              setNoteId((a) => ({ ...a, value: e.target.value }));
+            }}
+          />
+          <Button Class="!h-8 !w-full !max-w-none" onClick={handleSaveNote}>
+            Simpan Catatan
+          </Button>
+        </div>
+      </ModalComponent>
+      <ModalComponent
+        hideHeader
+        isOpen={getModal === "preventif_modal"}
+        setClose={() => {
+          setScreen("");
+          setModal("");
+        }}
+        full
+      >
+        <div className="flex flex-col gap-4 py-4 px-2 items-center">
+          <span className="bold-base text-center">{getModalText?.title}</span>
+          <span className="medium-sm text-center">{getModalText?.desc}</span>
+          <Button Class="!h-8 !max-w-none mt-1" onClick={() => setModal("")}>
+            Ok
+          </Button>
+        </div>
+      </ModalComponent>
+      {getProducts?.length ? (
+        <>
+          <div className="p-3 bg-warning-100  flex items-center gap-[10px]">
+            <span className="w-4 h-4">
+              <IconComponent src={"/icons/warning.svg"} />
+            </span>
+            <span className="medium-xs">
+              Mohon pastikan kembali pesanan kamu telah sesuai, ini adalah
+              langkah terakhir sebelum pembayaran
+            </span>
+          </div>
+          {getProducts?.map((val, i) => {
+            let theExpedition = getExpedition?.find((a) => a.id == i);
+            return (
+              <div
+                className="py-6 px-4 flex flex-col gap-4 bg-neutral-50"
+                key={i}
+              >
+                <VoucherCheckout
+                  seller_id={val?.seller?.id}
+                  transaction={Number(+val?.totalAmount)}
+                  onSubmit={(rest) => handleSelectedVoucher({ id: i, ...rest })}
+                />
+                <span className="semi-sm">Pesanan {i + 1}</span>
+                <div className="flex gap-1 item-center">
+                  <IconComponent src={"/icons/product-house.svg"} />
+                  <span className="semi-sm">{val?.seller?.storeName}</span>
+                </div>
+                <div className="py-1 px-3 flex gap-2 bg-neutral-200 rounded-md">
+                  <IconComponent src={"/icons/location.svg"} />
+                  <span className="medium-xs text-neutral-700">
+                    Dikirim dari : {val?.seller?.cityName}
+                  </span>
+                </div>
+                <div
+                  className="p-3 flex gap-2 border border-neutral-400 rounded-md justify-between items-center"
+                  onClick={() => {
+                    setSelectedSeller({
+                      originSeller: val?.seller?.id,
+                      sellerID: val?.seller?.id + i,
+                      id: i,
+                    });
+                    setScreen("list_location");
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <IconComponent src={"/icons/location.svg"} />
+                    <span className="semi-sm text-neutral-700">
+                      Dikirim ke :{" "}
+                      {getChangedLocation?.some(
+                        (a) => a?.sellerID === val?.seller?.id + i
+                      )
+                        ? getChangedLocation?.find(
+                            (a) => a?.sellerID === val?.seller?.id + i
+                          )?.City
+                        : val?.shippingAddress?.City}
+                    </span>
+                  </div>
+                  <IconComponent src={"/icons/chevron-right.svg"} />
+                </div>
+                <div
+                  className="p-3 flex gap-2 bg-[#FFEAEC] rounded-md justify-between items-center"
+                  onClick={() => {
+                    setShowBottomsheet(true);
+                    setSelectedSeller({
+                      originSeller: val?.seller?.id,
+                      sellerID: val?.seller?.id,
+                      id: i,
+                    });
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    {/* yasha */}
+                    <ImageComponent
+                      src={"/img/voucher-red.png"}
+                      width={28}
+                      height={28}
+                      alt={"asd"}
+                    />
+                    <span className="semi-sm text-[#C22716]" name={i}>
+                      {getSelectedVoucher.some((a) => a?.id === i)
+                        ? `${
+                            getSelectedVoucher.some((a) => a?.id === i) &&
+                            getVoucherCount(
+                              getSelectedVoucher.find((a) => a?.id === i)
+                            )
+                          } Voucher Terpakai`
+                        : "Gunakan Voucher Penjual"}
+                    </span>
+                  </div>
+                  <IconComponent
+                    src={"/icons/chevron-right.svg"}
+                    classname={"icon-error"}
+                  />
+                </div>
+                {val?.products?.map((product) => {
+                  return (
+                    <CardOrderDetailProductMobile
+                      note={getNote}
+                      key={product.id}
+                      {...product}
+                      onClickNote={(id) => {
+                        let isNoteInList = getNote.filter(
+                          (notesList) => notesList.id === id
+                        );
+                        if (isNoteInList.length > 0) {
+                          setNoteId({ id: id, value: isNoteInList[0].value });
+                        } else {
+                          setNoteId((a) => ({ ...a, id }));
+                        }
+                        setModal("add_note");
+                      }}
+                    />
+                  );
+                })}
+                <div className="flex flex-col gap-3" id="opsi-pengiriman">
+                  <div
+                    className="p-3 flex flex-col gap-3 bg-primary-50 rounded-md justify-between items-center"
+                    onClick={() => {
+                      setSelectedSeller({
+                        sellerID: val?.seller?.id + i,
+                        id: i,
+                      });
+                      setScreen("pilih_opsi_pengiriman");
+                    }}
+                  >
+                    {/* 24. THP 2 - MOD001 - MP - 016 - QC Plan - Web - MuatParts - Paket 024 B - Homepage Buyer LB - 0160 */}
+                    <div className="flex gap-2 w-full items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="grid place-content-center w-7 h-7 rounded-full bg-neutral-50">
+                          <IconComponent
+                            src={"/icons/truck-outline.svg"}
+                            width={16}
+                            height={16}
+                            alt={"asd"}
+                          />
+                        </span>
+                        {typeof theExpedition?.id === "number" ? (
+                          <div className="flex flex-col gap-2">
+                            <span className="semi-sm">
+                              {theExpedition?.expedisi?.courierName}
+                            </span>
+                            <span className="medium-xs">
+                              {theExpedition?.expedisi?.courierName}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="semi-sm text-primary-700">
+                            Pilih Opsi Pengiriman
+                          </span>
+                        )}
+                      </div>
+                      <IconComponent
+                        src={"/icons/chevron-right.svg"}
+                        classname={"icon-blue"}
+                      />
+                    </div>
+                    {
+                      // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB-0306
+                      typeof theExpedition?.id === "number" &&
+                      theExpedition.groupname !== "takeaway" &&
+                      theExpedition.groupname !== "store_courier" ? (
+                        <>
+                          <span className="h-[1px] w-full bg-neutral-400"></span>
+                          <Checkbox
+                            onChange={(a) =>
+                              handleCheckInsurance(theExpedition)
+                            }
+                            checked={
+                              theExpedition?.expedisi?.mustUseInsurance
+                                ? theExpedition?.expedisi?.mustUseInsurance
+                                : withInsurance?.find((smk) => smk?.id == i)
+                                    ?.checked
+                            }
+                            classname={"self-start"}
+                            disabled={theExpedition?.expedisi?.mustUseInsurance}
+                            label={`Pakai Asuransi Pengiriman (${numberFormatMoney(
+                              theExpedition?.expedisi?.originalInsurance
+                            )})`}
+                          />
+                        </>
+                      ) : (
+                        ""
+                      )
+                    }
+                  </div>
+                  {getValidation?.some(
+                    (a) => a.type === "expedition" && a.id == i
+                  ) && (
+                    <span className="medium-xs text-error-400">
+                      Opsi pengiriman wajib diisi
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-6">
+                  <span className="semi-sm">Sub Total</span>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex item-center justify-between">
+                      <span className="medium-xs text-neutral-600">
+                        Total Harga ({val?.products?.length} produk)
+                      </span>
+                      <span className="semi-xs">
+                        {numberFormatMoney(val?.totalAmount)}
+                      </span>
+                    </div>
+                    {getExpedition?.some((a) => a?.id === i) && (
+                      <div className="flex item-center justify-between">
+                        <span className="medium-xs text-neutral-600">
+                          Biaya Pengiriman
+                        </span>
+                        <span className="semi-xs">
+                          {numberFormatMoney(
+                            getExpedition?.find((a) => a?.id === i)?.expedisi
+                              ?.buyerCost
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {withInsurance?.some((a) => a?.id === i) && (
+                      <div className="flex item-center justify-between">
+                        <span className="medium-xs text-neutral-600">
+                          Biaya Asuransi
+                        </span>
+                        <span className="semi-xs">
+                          {numberFormatMoney(
+                            getExpedition?.find((a) => a?.id == i)?.expedisi
+                              ?.originalInsurance
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div className="py-5 px-4 my-2 bg-neutral-50 flex flex-col gap-3">
+            <div className="flex justify-between w-full items-center">
+              <span className="semi-sm">Opsi Pembayaran</span>
+              <span
+                className="semi-sm text-primary-700"
+                onClick={() => setScreen("pilih_opsi_pembayaran")}
+              >
+                {paymentOption?.method?.id ? "Ubah" : "Pilih"}
+              </span>
+            </div>
+            {paymentOption?.method?.id ? (
+              <div className="flex gap-2 items-center">
+                {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 -LB - 0002 */}
+                {paymentOption?.method?.icon ? (
+                  <ImageComponent
+                    alt={paymentOption?.method.name}
+                    src={paymentOption?.method?.icon}
+                    width={24}
+                    height={24}
+                  />
+                ) : (
+                  <span className="w-6 h-6 border border-neutral-400"></span>
+                )}
+                <span className="semi-xs">{paymentOption?.method?.name}</span>
+              </div>
+            ) : (
+              ""
+            )}
+          </div>
+          <div className="flex flex-col p-4 gap-4 bg-neutral-50">
+            <span className="semi-sm">Ringkasan Pembayaran</span>
+            <span className="semi-sm">Ringkasan Pesanan</span>
+            <div className="flex flex-col gap-4 mt-6 pb-6 border-b border-neutral-400">
+              <div className="flex w-full justify-between items-center">
+                <span className="medium-xs text-neutral-600">
+                  Total Harga ({totalProductLength} produk)
+                </span>
+                <span className="semi-xs">
+                  {numberFormatMoney(totalProduct)}
+                </span>
+              </div>
+              <div className="flex w-full justify-between items-center">
+                <span className="medium-xs text-neutral-600">
+                  Total Biaya Pengiriman
+                </span>
+                <span className="semi-xs">
+                  {numberFormatMoney(totalShippingCost)}
+                </span>
+              </div>
+              {withInsurance?.length ? (
+                <div className="flex w-full justify-between items-center">
+                  <span className="medium-xs text-neutral-600">
+                    Total Asuransi Pengiriman
+                  </span>
+                  <span className="semi-xs">
+                    {numberFormatMoney(totalInsuranceCost)}
+                  </span>
+                </div>
+              ) : (
+                ""
+              )}
+              {getSelectedVoucher?.map((val, i) => {
+                return (
+                  <Fragment key={i}>
+                    {val?.voucherProduct?.uuid && (
+                      <div className="flex w-full justify-between items-center">
+                        <span className="medium-xs text-neutral-600">
+                          Voucher : {val?.voucherProduct?.kode}
+                        </span>
+                        <span className="semi-xs text-error-500">
+                          -
+                          {numberFormatMoney(
+                            generateEachVoucher(
+                              val?.voucherProduct?.discountType,
+                              val?.voucherProduct?.discountValue,
+                              val?.voucherProduct?.discountMax,
+                              getProducts?.find(
+                                (a) => a?.seller?.id === val?.sellerID
+                              )?.totalAmount
+                            )
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {val?.voucherOngkir?.uuid && (
+                      <div className="flex w-full justify-between items-center">
+                        <span className="medium-xs text-neutral-600">
+                          Voucher : {val?.voucherOngkir?.kode}
+                        </span>
+                        <span className="semi-xs text-error-500">
+                          -
+                          {numberFormatMoney(
+                            generateEachVoucher(
+                              val?.voucherOngkir?.discountType,
+                              val?.voucherOngkir?.discountValue,
+                              val?.voucherOngkir?.discountMax,
+                              totalShippingCost
+                            )
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </Fragment>
+                );
+              })}
+
+              <UsedVoucherList
+                voucherData={submittedVouchers}
+                purchaseAmount={totalProduct}
+                shippingCostAmount={totalShippingCost}
+              />
+              {/* {getSelectedVoucher.filter(a=>a?.voucherProduct).length>0&&<div className='flex w-full justify-between items-center'>
+                <span className="medium-xs text-neutral-600">Voucher Produk</span>
+                <span className="semi-xs text-error-500">-{numberFormatMoney(generateVoucher())}</span>
+              </div>}
+              {getSelectedVoucher.filter(a=>a?.voucherProduct).length>0&&<div className='flex w-full justify-between items-center'>
+                <span className="medium-xs text-neutral-600">Voucher Ongkir</span>
+                <span className="semi-xs text-error-500">-{numberFormatMoney(generateVoucherOngkir())}</span>
+              </div>} */}
+            </div>
+            <div className="pb-6 border-b border-neutral-400 flex flex-col gap-6">
+              <span className="semi-sm">Biaya Lainnya</span>
+              <div className="flex w-full justify-between items-center">
+                <span className="medium-xs text-neutral-600">
+                  Biaya Aplikasi
+                </span>
+                <span className="semi-xs">
+                  {numberFormatMoney(supportingDataCheckoutDetail?.appFee)}
+                </span>
+              </div>
+              {/* 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0406 */}
+              {paymentOption?.method?.fee && (
+                <div className="flex w-full justify-between items-center">
+                  <span className="medium-xs text-neutral-600">
+                    Biaya {paymentOption?.method?.name}
+                  </span>
+                  <span className="semi-xs">
+                    {numberFormatMoney(+paymentOption?.method?.fee)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex w-full justify-between items-center">
+              <span className="semi-sm">Total Tagihan</span>
+              <span className="bold-base">
+                {numberFormatMoney(
+                  totalBill([
+                    totalProduct,
+                    -totalMuatpartsPurchaseVouchers,
+                    totalShippingCost,
+                    -totalMuatpartsShippingVouchers,
+                    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0561
+                    getExpedition?.[0]?.expedisi?.mustUseInsurance ||
+                    withInsurance?.length
+                      ? totalInsuranceCost
+                      : 0,
+                    ...getSelectedVoucher?.map((val, i) => {
+                      if (val?.voucherProduct?.uuid)
+                        return -generateEachVoucher(
+                          val?.voucherProduct?.discountType,
+                          val?.voucherProduct?.discountValue,
+                          val?.voucherProduct?.discountMax,
+                          getProducts?.find(
+                            (a) => a?.seller?.id === val?.sellerID
+                          )?.totalAmount
+                        );
+                      return 0;
+                    }),
+                    ...getSelectedVoucher?.map((val, i) => {
+                      if (val?.voucherOngkir?.uuid)
+                        return -generateEachVoucher(
+                          val?.voucherOngkir?.discountType,
+                          val?.voucherOngkir?.discountValue,
+                          val?.voucherOngkir?.discountMax,
+                          totalShippingCost
+                        );
+                      return 0;
+                    }),
+                    supportingDataCheckoutDetail?.appFee,
+                    paymentOption?.method?.fee
+                      ? +paymentOption?.method?.fee
+                      : 0,
+                  ])
+                )}
+              </span>
+            </div>
+          </div>
+          <div
+            className="py-5 px-4 my-2 bg-neutral-50 flex flex-col gap-3 pb-32"
+            id="dropship-form"
+          >
+            <DropshipForm
+              onUpdateValues={checkDropshipValues}
+              dropshipValues={dropshipValues}
+              errorsValues={dropshipErrors}
+              isDropship={isDropship}
+              setIsDropship={setIsDropship}
+            />
+          </div>
+        </>
+      ) : (
+        ""
+      )}
+      {!isLoadingCheckout && !errorCheckout && (
+        <ButtonBottomMobile
+          isSingleButton
+          textSingleButton={"Bayar"}
+          classname={"py-2 px-4 flex flex-col gap-[10px]"}
+          onClickSingleButton={handlePay}
+          hasMuatPartsVoucher
+        />
+      )}
+    </div>
+  );
+}
+
+export default CheckoutResponsive;

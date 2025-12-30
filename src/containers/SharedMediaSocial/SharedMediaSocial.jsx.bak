@@ -1,0 +1,160 @@
+
+'use client';
+import { viewport } from '@/store/viewport';
+import style from './SharedMediaSocial.module.scss'
+import ImageComponent from '@/components/ImageComponent/ImageComponent';
+import { generateThumbnail, handleCopy } from '@/libs/services';
+import { numberFormatMoney } from '@/libs/NumberFormat';
+import SWRHandler from '@/services/useSWRHook'
+import { useEffect } from 'react';
+import { useTranslation } from '@/services/languageTranslate';
+function SharedMediaSocial({image,brand,price,priceLabel,name,id}) {
+  // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0728
+    const {t} = useTranslation()
+    const {useSWRMutateHook} = SWRHandler()
+    const {isMobile}=viewport()
+    const {
+        data: dataShareProduct,
+        error: errorShareProduct,
+        trigger: triggerShareProduct,
+      } = useSWRMutateHook(
+        id
+          ? `${process.env.NEXT_PUBLIC_GLOBAL_API}v1/muatparts/product/share/${id}`
+          : null,
+        "GET"
+      );
+    const shortenedLink = dataShareProduct?.data
+        ? dataShareProduct?.data.Data.shortenedLink
+        : "";
+    const getShareText = () => {
+        // console.log("get",product)
+        return `Temukan ${name} seharga ${priceLabel}. Dapatkan sekarang juga di Muatparts!`;
+    };
+        
+    // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0622
+    // 25. 07 - QC Plan - Web Apps - Marketing Muatparts - LB - 0002
+    const shareThroughApps = [
+        {
+            link: () =>
+            `https://wa.me/?text=${getShareText()}${
+                shortenedLink ? "%0a" + shortenedLink : ""
+            }`,
+            title: "Whatsapp",
+            url: "/img/whatsapp.png",
+        },
+            {
+              link: () =>
+                `https://t.me/share/url?text=${shortenedLink}&url=${getShareText()}`,
+              title: "Telegram",
+              url: "/img/telegram.png",
+            },
+            {
+              link: () =>
+                `https://www.facebook.com/sharer/sharer.php?u=${shortenedLink}&quote=${getShareText()}`,
+              title: "Facebook",
+              url: "/img/facebook.png",
+            },
+            {
+              link: (product) => `Bagikan produk ${product}`,
+              title: "Instagram",
+              url: "/img/instagram.png",
+            },
+            {
+              link: (product) =>
+                `https://twitter.com/intent/tweet?text=${getShareText()}&url=${shortenedLink}`,
+              title: "x",
+              url: "/img/twitter.png",
+            },
+            {
+              link: () =>
+                `mailto:?body=${getShareText()}${
+                  shortenedLink ? "%0a" + shortenedLink : ""
+                }`,
+              title: "Email",
+              url: "/img/gmail.png",
+            },
+            {
+              link: () => ``,
+              onClick: (e) => {
+                try {
+                  const text = shortenedLink;
+                  e.preventDefault();
+                  if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text);
+                  } else {
+                    const input = document.createElement("textarea");
+                    input.value = text;
+                    document.body.appendChild(input);
+                    input.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(input);
+                  }
+                } catch (err) {
+                  console.log(err);
+                }
+              },
+              title: "Salin Tautan",
+              url: "/img/copy-link.png",
+            },
+          ];
+
+    useEffect(()=>{
+        if(id){
+            triggerShareProduct()
+        }
+    },[id])
+    return (
+        <div className={`flex flex-col gap-6 sm:gap-4 px-4 py-9 sm:py-4 sm:pb-20 ${isMobile?'':'items-center'}`}>
+            {isMobile?'':<span className='font-bold text-base'>{t("LabelmodalBagikanProdukBagikanProduk")}</span>}
+            <div className='rounded-xl border border-neutral-400 p-3 gap-5 sm:gap-3 sm:rounded-md flex items-start w-full'>
+                <ImageComponent src={image?.includes("www.youtube.com")?generateThumbnail(image):image} width={56} height={56} alt='asd' />
+                <div className='flex flex-col gap-3'>
+                    <span className={`${isMobile?'bold-sm':'bold-xs'}`}>{name}</span>
+                    <span className={`${isMobile?'medium-sm':'font-medium text-[10px]'}`}>{t("LabelmodalBagikanProdukBrand")} : {brand||'-'}</span>
+                    <span className={`${isMobile?'medium-sm':'font-medium text-[10px]'}`}>{t("LabelmodalBagikanProdukHarga")} : {numberFormatMoney(price)}</span>
+                </div>
+            </div>
+            {isMobile?<span className='medium-sm'>{t("LabelmodalBagikanProdukBagikanProduk")}</span>:''}
+            <div className="flex gap-6 flex-wrap w-full justify-center sm:-mt-[2px]">
+                {isMobile?<div className="flex flex-col gap-2 items-center select-none cursor-pointer" onClick={()=>{
+                    handleCopy(shortenedLink,"Berhasil menyalin")
+                }}>
+                    <span className='w-9 h-9 p-1 rounded-full border border-neutral-400 overflow-hidden'>
+                        <ImageComponent src={'/icons/salin-tautan.svg'} width={36} height={36} alt='sd' className='object-contain' />
+                        {/* yasha */}
+                    </span>
+                    <span className="medium-xs text-[10px]">{t("LabelmodalBagikanProdukSalinTautan")}</span>
+                </div>:''}
+                {
+                    shareThroughApps.map((rows, index)=>{
+                        let href = rows.link();
+                        if(href!==''){
+                            return(
+                                <a href={href} target="_blank" key={index} className="flex flex-col gap-2 items-center select-none cursor-pointer" onClick={rows.onClick}>
+                                <span className='w-9 h-9 p-1 rounded-full border border-neutral-400 overflow-hidden'>
+                                    <ImageComponent src={rows.url} width={36} height={36} alt='sd' className='object-contain' />
+                                </span>
+                                <span className="medium-xs text-[10px]">{rows.title}</span>
+                            </a>
+                            )
+                        }
+                    })
+                }
+                
+                {isMobile?'':<div className="flex flex-col gap-2 items-center select-none cursor-pointer" onClick={()=>{
+                    handleCopy(shortenedLink,"Berhasil menyalin")
+                }}>
+                    <span className='w-9 h-9 p-1 rounded-full border border-neutral-400 overflow-hidden'>
+                        <ImageComponent src={'/icons/salin-tautan.svg'} width={36} height={36} alt='sd' className='object-contain' />
+                        {/* yasha */}
+                    </span>
+                    <span className="medium-xs text-[10px]">{t("LabelmodalBagikanProdukSalinTautan")}</span>
+                </div>}
+            </div>
+
+        </div>
+    );
+}
+
+export default SharedMediaSocial;
+  

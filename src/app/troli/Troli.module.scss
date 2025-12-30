@@ -1,0 +1,51 @@
+.main {
+  @media (min-width: 500px) {
+    display: "flex";
+    padding: 24px 40px 24px;
+    margin: 0px auto;
+    max-width: 1280px;
+  }
+}
+
+.textButtonPrimary {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--neutral-500);
+  cursor: not-allowed;
+
+  // active
+  &.active {
+    color: var(--primary-700);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--primary-800);
+      font-weight: 600;
+    }
+  }
+}
+
+.textButtonError {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--neutral-500);
+  cursor: not-allowed;
+
+  // active
+  &.active {
+    color: var(--error-400);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--error-500);
+      font-weight: 600;
+    }
+  }
+}
+
+.liked {
+  path {
+    fill: var(--error-400);
+    stroke: var(--error-400);
+  }
+}
