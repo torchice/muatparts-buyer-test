@@ -5,7 +5,6 @@ const commitHash = execSync('git log --pretty=format:"%h" -n1')
   .trim();
 
 const nextConfig = {
-  assetPrefix: '/muatparts',
   env: {
     COMMIT_HASH: commitHash,
   },
@@ -13,8 +12,8 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: [process.env.NEXT_PUBLIC_ASSET_REVERSE+"/"],
-    path: process.env.NEXT_PUBLIC_ASSET_REVERSE+"/_next/image",
+    domains: [process.env.NEXT_PUBLIC_ASSET_REVERSE + "/"],
+    path: process.env.NEXT_PUBLIC_ASSET_REVERSE + "/_next/image",
     remotePatterns: [
       {
         hostname: "prd.place",
