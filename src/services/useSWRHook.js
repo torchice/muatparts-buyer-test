@@ -7,7 +7,8 @@ import { userZustand } from "@/store/auth/userZustand";
 import { useSearchParams } from "next/navigation";
 
 function SWRHandler() {
-  const { get, post, put, deleted } = ConfigUrl();
+  // 25. 16 - Web - LB - 0033
+  const { get, post2, put, deleted } = ConfigUrl();
   // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0718
   const getLang = useSearchParams()
   async function defaultFetcherGet(url, option) {
@@ -30,7 +31,7 @@ function SWRHandler() {
           userZustand.getState().removeUser();
         }
         // imp_undermaintenance_uat
-        if(err.status === 503 && window){
+        if (err.status === 503 && window) {
           window.location.replace(process.env.NEXT_PUBLIC_INTERNAL_WEB + "sistem");
         }
         if (props) props
@@ -39,25 +40,41 @@ function SWRHandler() {
     return result;
   }
 
-  function useSWRMutateHook(url, method, customFetcher, cbError,headers) {
+  function useSWRMutateHook(url, method, customFetcher, cbError, headers) {
     const result = useSWRMutation(
       url,
       (url, { arg }) => {
         if (customFetcher) {
           return customFetcher(url, arg);
         } else {
-          if(method==='put'||method==='PUT') return put({path:url,data:arg})
-          if(method==='delete'||method==='DELETE') { return deleted({path:url,options:arg})}
-          return axios({
-            data:arg,
-            url:url,
-            method:method?method:'post',
-            headers:{
-              "Authorization":'Bearer '+authZustand.getState()?.accessToken,
-              "refreshToken":authZustand.getState()?.refreshToken,
-              "languageid":getLang.get('lang') || localStorage.getItem('lang') ||'id',
-              "platform":"web",
-              "loginas":"buyer",
+          if (method === 'put' || method === 'PUT') return put({ path: url, data: arg })
+          if (method === 'get' || method === 'GET') return put({ path: url, data: arg })
+          if (method === 'delete' || method === 'DELETE') { return deleted({ path: url, options: arg }) }
+          // 25. 16 - Web - LB - 0033
+          // return axios({
+          //   data:arg,
+          //   url:url,
+          //   method:method?method:'post',
+          //   headers:{
+          //     "Authorization":'Bearer '+authZustand.getState()?.accessToken,
+          //     "refreshToken":authZustand.getState()?.refreshToken,
+          //     "languageid":getLang.get('lang') || localStorage.getItem('lang') ||'id',
+          //     "platform":"web",
+          //     "loginas":"buyer",
+          //     ...headers
+          //   },
+          // });
+          return post2({
+            data: arg,
+            // 25. 16 - Web - LB - 0033
+            path: url,
+            method: method ? method : 'post',
+            headers: {
+              "Authorization": 'Bearer ' + authZustand.getState()?.accessToken,
+              "refreshToken": authZustand.getState()?.refreshToken,
+              "languageid": getLang.get('lang') || localStorage.getItem('lang') || 'id',
+              "platform": "web",
+              "loginas": "buyer",
               ...headers
             },
           });
@@ -71,7 +88,7 @@ function SWRHandler() {
               authZustand.getState().clearToken('use swr mutation error');
               userZustand.getState().removeUser();
             }
-            if(err.status === 503 && window){
+            if (err.status === 503 && window) {
               window.location.replace(process.env.NEXT_PUBLIC_INTERNAL_WEB + "sistem");
             }
           }

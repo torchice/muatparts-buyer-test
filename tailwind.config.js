@@ -232,7 +232,7 @@ module.exports = {
         },
       });
     },
-    function({ addComponents }) {
+    function ({ addComponents }) {
       addComponents({
         '.skeleton': {
           backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%)',
