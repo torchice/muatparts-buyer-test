@@ -5,7 +5,7 @@ import { viewport } from "@/store/viewport"
 import { headerProps } from "@/containers/HeaderContainer/headerProps"
 import SWRHandler from "@/services/useSWRHook"
 import { categoriesZustand } from "@/store/products/categoriesZustand"
-import { notFound, useSearchParams,useParams,usePathname } from "next/navigation"
+import { notFound, useSearchParams, useParams, usePathname } from "next/navigation"
 import { authZustand } from "@/store/auth/authZustand"
 import { userZustand } from "@/store/auth/userZustand"
 import Bottomsheet from "@/components/Bottomsheet/Bottomsheet"
@@ -20,17 +20,19 @@ function App({ children }) {
   const { headerHeight } = headerProps()
 
   // 25. 03 - QC Plan - Web - Pengecekan Ronda Muatparts - Tahap 2 - LB - 0283
-  const [getTmpToken,setTmpToken]=useState({accessToken:'',
-    refreshToken:''})
+  const [getTmpToken, setTmpToken] = useState({
+    accessToken: '',
+    refreshToken: ''
+  })
   // 25. 11 - QC Plan - Web - Ronda Live Mei - LB - 0288
   const [isReady, setIsReady] = useState(false)
 
   const { setIsmobile, setWidthScreen } = viewport()
-  
-  const { setUser, setUserBy, photo, id,removeUser } = userZustand()
+
+  const { setUser, setUserBy, photo, id, removeUser } = userZustand()
   const { setCategories, categories } = categoriesZustand()
   const { accessToken, refreshToken, setToken, clearToken } = authZustand()
-  const {resetFilter}=filterProduct()
+  const { resetFilter } = filterProduct()
   const { useSWRHook, useSWRMutateHook } = SWRHandler()
 
   const searchAccessToken = searchParams.get("accessToken")
@@ -43,16 +45,16 @@ function App({ children }) {
   }, [params, searchAccessToken])
 
   useEffect(() => {
+    // 25. 26 - Web - LB - 0015
     if (searchAccessToken && searchRefreshToken) {
+      // clearToken();
       setTmpToken({ accessToken: searchAccessToken, refreshToken: searchRefreshToken })
-    // 25. 11 - QC Plan - Web - Ronda Live Mei - LB - 0288
-    } else if (accessToken & refreshToken){
-      setIsReady(true)
     } else {
+      setTmpToken({ accessToken: accessToken, refreshToken: refreshToken })
       setIsReady(true)
     }
   }, [searchAccessToken, searchRefreshToken, accessToken, refreshToken])
-  
+
   const { data: auth } = useSWRHook(
     getTmpToken.accessToken ? "v1/muatparts/auth/credential-check" : null,
     null,
@@ -84,10 +86,12 @@ function App({ children }) {
           updatedParams.delete("refreshToken")
           router.replace(`${pathName}?${updatedParams.toString()}`)
         }
-      }
+      } // 25. 16 - Web - LB - 0040
+    } else {
+      setIsReady(true)
     }
   }, [auth])
-  
+
 
   useEffect(() => {
     if (id && !photo) {
@@ -122,8 +126,14 @@ function App({ children }) {
   //   handleResize()
   //   return () => window.removeEventListener("resize", handleResize)
   // }, [handleResize])
-  
- 
+
+  useEffect(() => {
+    if (!pathName?.includes('/products')) resetFilter()
+    document.title =
+      pathName === "/"
+        ? "Homepage muatparts"
+        : `muatparts | ${pathName.slice(1).replace(/-/g, " ")}`
+  }, [pathName])
   useEffect(() => {
     if (!id) {
       // list bug mandiri multibahasa
@@ -133,7 +143,7 @@ function App({ children }) {
     }
   }, [id])
   // 25. 11 - QC Plan - Web - Ronda Live Mei - LB - 0288
-  if(!isReady) return null
+  if (!isReady) return null
   return (
     <>
       <Modal />

@@ -5,6 +5,8 @@ const commitHash = execSync('git log --pretty=format:"%h" -n1')
   .trim();
 
 const nextConfig = {
+  assetPrefix: '/muatparts',
+  reactStrictMode: false,
   env: {
     COMMIT_HASH: commitHash,
   },
